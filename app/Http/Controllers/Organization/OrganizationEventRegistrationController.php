@@ -48,7 +48,7 @@ class OrganizationEventRegistrationController extends Controller
                 ] : null,
             ]);
 
-        return response()->json(['message' => $registrations], 200);
+        return response()->json(['message' => $registrations->values()], 200);
     }
 
     public function store(Request $request)
