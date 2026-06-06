@@ -91,12 +91,22 @@ class OrganizationEventRegistrationController extends Controller
             return response()->json(['message' => 'already_registered'], 409);
         }
 
-        $isFree = (float) $event->fee === 0.0;
-        $gateway = $isFree ? null : OrganizationPaymentGateway::where('organization_id', $organization->id)
+        $isFree    = (float) $event->fee === 0.0;
+        $gateways  = $isFree ? collect() : OrganizationPaymentGateway::where('organization_id', $organization->id)
             ->where('active', true)
-            ->first();
+            ->get();
 
-        $registration = DB::transaction(function () use ($request, $event, $userId, $isFree, $gateway) {
+        // If multiple gateways and buyer hasn't chosen yet, let them pick
+        $chosenGatewayKey = $request->input('gateway');
+        $needsGatewayChoice = ! $isFree && $gateways->count() > 1 && ! $chosenGatewayKey;
+
+        $gateway = $needsGatewayChoice
+            ? null
+            : ($chosenGatewayKey
+                ? $gateways->firstWhere('gateway', $chosenGatewayKey)
+                : $gateways->first());
+
+        $registration = DB::transaction(function () use ($request, $event, $userId, $isFree, $gateway, $needsGatewayChoice) {
             $reg = OrganizationEventRegistration::create([
                 'organization_event_id' => $event->id,
                 'user_id' => $userId,
@@ -108,9 +118,9 @@ class OrganizationEventRegistrationController extends Controller
             ]);
 
             // Stripe Connect auto-collects fee via application_fee_amount — no billing_item needed.
-            // All other cases (MP paid, free events, no gateway) need a billing_item for monthly invoice.
+            // When gateway not yet chosen, record billing item conservatively (MP flow assumption).
             $isStripeConnectPaid = ! $isFree && $gateway && $gateway->gateway === 'stripe_connect';
-            if (! $isStripeConnectPaid) {
+            if (! $isStripeConnectPaid && ! $needsGatewayChoice) {
                 $reg->load('event.organization');
                 app(BillingService::class)->recordRegistrationFee($reg, (float) $event->fee);
             }
@@ -125,6 +135,19 @@ class OrganizationEventRegistrationController extends Controller
             ], 201);
         }
 
+        // Return available gateways for buyer to choose
+        if ($needsGatewayChoice) {
+            return response()->json([
+                'message' => 'registered',
+                'data' => [
+                    'id' => $registration->id,
+                    'payment_status' => 'pending',
+                    'payment_url' => null,
+                    'available_gateways' => $gateways->pluck('gateway')->values(),
+                ],
+            ], 201);
+        }
+
         if (! $gateway) {
             return response()->json([
                 'message' => 'registered',
@@ -133,44 +156,11 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         $viewerBase = config('app.viewer_url', 'http://localhost:5173');
-        $eventFee = (float) $event->fee;
-        $feeAmount = app(BillingService::class)->calculateFee($eventFee);
+        $eventFee   = (float) $event->fee;
+        $feeAmount  = app(BillingService::class)->calculateFee($eventFee);
 
         try {
-            if ($gateway->gateway === 'mercadopago') {
-                $accessToken = Crypt::decryptString($gateway->access_token);
-                $pref = app(MercadoPagoService::class)->createPreference(
-                    $accessToken,
-                    $event->name,
-                    $eventFee,
-                    $event->currency ?? 'brl',
-                    $registration->id,
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending",
-                    $feeAmount
-                );
-                $registration->update(['gateway_preference_id' => $pref['id'], 'gateway' => 'mercadopago']);
-                $paymentUrl = $pref['init_point'];
-            } else {
-                // Stripe Connect
-                $connectedAccountId = $gateway->gateway_user_id;
-                $amountCents = (int) round($eventFee * 100);
-                $feeCents = (int) round($feeAmount * 100);
-                $currency = strtolower($event->currency ?? 'brl');
-                $session = app(StripeConnectService::class)->createCheckoutSession(
-                    $connectedAccountId,
-                    $event->name,
-                    $amountCents,
-                    $currency,
-                    $feeCents,
-                    $registration->id,
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure"
-                );
-                $registration->update(['gateway_preference_id' => $session['id'], 'gateway' => 'stripe_connect']);
-                $paymentUrl = $session['url'];
-            }
+            $paymentUrl = $this->createPaymentUrl($gateway, $event, $organization, $registration, $eventFee, $feeAmount, $viewerBase);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'registered',
@@ -204,8 +194,10 @@ class OrganizationEventRegistrationController extends Controller
             return response()->json(['message' => ['status' => $registration->payment_status]], 200);
         }
 
-        $gateway = OrganizationPaymentGateway::where('organization_id', $organization->id)
-            ->where('active', true)->first();
+        $gwQuery = OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true);
+        $gateway = $registration->gateway
+            ? $gwQuery->where('gateway', $registration->gateway)->first()
+            : $gwQuery->first();
 
         if ($gateway && $registration->gateway_preference_id) {
             try {
@@ -267,53 +259,80 @@ class OrganizationEventRegistrationController extends Controller
             return response()->json(['message' => 'not_pending'], 422);
         }
 
-        $gateway = OrganizationPaymentGateway::where('organization_id', $organization->id)
-            ->where('active', true)->first();
+        $chosenGatewayKey = $request->input('gateway');
+        $allGateways = OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get();
+
+        if ($allGateways->isEmpty()) return response()->json(['message' => 'no_gateway'], 422);
+
+        // Multiple gateways and buyer hasn't chosen → return list to let them pick
+        if ($allGateways->count() > 1 && ! $chosenGatewayKey) {
+            return response()->json([
+                'message' => ['available_gateways' => $allGateways->pluck('gateway')->values()],
+            ], 200);
+        }
+
+        $gateway = $chosenGatewayKey
+            ? $allGateways->firstWhere('gateway', $chosenGatewayKey)
+            : $allGateways->first();
         if (! $gateway) return response()->json(['message' => 'no_gateway'], 422);
 
         $viewerBase = config('app.viewer_url', 'http://localhost:5173');
         $eventFee   = (float) $event->fee;
         $feeAmount  = app(BillingService::class)->calculateFee($eventFee);
 
+        // Multi-gateway: billing item deferred until gateway chosen — record it now for MP
+        if (is_null($registration->gateway) && $gateway->gateway === 'mercadopago') {
+            $registration->load('event.organization');
+            app(BillingService::class)->recordRegistrationFee($registration, $eventFee);
+        }
+
         try {
-            if ($gateway->gateway === 'mercadopago') {
-                $accessToken = Crypt::decryptString($gateway->access_token);
-                $pref = app(MercadoPagoService::class)->createPreference(
-                    $accessToken,
-                    $event->name,
-                    $eventFee,
-                    $event->currency ?? 'brl',
-                    $registration->id,
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending",
-                    $feeAmount
-                );
-                $registration->update(['gateway_preference_id' => $pref['id']]);
-                $paymentUrl = $pref['init_point'];
-            } else {
-                $connectedAccountId = $gateway->gateway_user_id;
-                $amountCents = (int) round($eventFee * 100);
-                $feeCents    = (int) round($feeAmount * 100);
-                $currency    = strtolower($event->currency ?? 'brl');
-                $session = app(StripeConnectService::class)->createCheckoutSession(
-                    $connectedAccountId,
-                    $event->name,
-                    $amountCents,
-                    $currency,
-                    $feeCents,
-                    $registration->id,
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure"
-                );
-                $registration->update(['gateway_preference_id' => $session['id']]);
-                $paymentUrl = $session['url'];
-            }
+            $paymentUrl = $this->createPaymentUrl($gateway, $event, $organization, $registration, $eventFee, $feeAmount, $viewerBase);
         } catch (\Exception $e) {
             return response()->json(['message' => 'gateway_error'], 500);
         }
 
         return response()->json(['message' => ['payment_url' => $paymentUrl]], 200);
+    }
+
+    private function createPaymentUrl($gateway, $event, $organization, $registration, float $eventFee, float $feeAmount, string $viewerBase): string
+    {
+        $successUrl = $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success";
+        $failureUrl = $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure";
+
+        if ($gateway->gateway === 'mercadopago') {
+            $accessToken = Crypt::decryptString($gateway->access_token);
+            $pref = app(MercadoPagoService::class)->createPreference(
+                $accessToken,
+                $event->name,
+                $eventFee,
+                $event->currency ?? 'brl',
+                $registration->id,
+                $successUrl,
+                $failureUrl,
+                $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending",
+                $feeAmount
+            );
+            $registration->update(['gateway_preference_id' => $pref['id'], 'gateway' => 'mercadopago']);
+            return $pref['init_point'];
+        }
+
+        // Stripe Connect
+        $amountCents = (int) round($eventFee * 100);
+        $feeCents    = (int) round($feeAmount * 100);
+        $currency    = strtolower($event->currency ?? 'brl');
+        $session = app(StripeConnectService::class)->createCheckoutSession(
+            $gateway->gateway_user_id,
+            $event->name,
+            $amountCents,
+            $currency,
+            $feeCents,
+            $registration->id,
+            $successUrl,
+            $failureUrl
+        );
+        $registration->update(['gateway_preference_id' => $session['id'], 'gateway' => 'stripe_connect']);
+        return $session['url'];
     }
 
     public function destroy(Request $request)
