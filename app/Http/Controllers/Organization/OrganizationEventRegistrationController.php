@@ -7,8 +7,11 @@ use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationEvent;
 use App\Models\Organization\OrganizationEventRegistration;
 use App\Models\Organization\OrganizationPaymentGateway;
+use App\Models\Organization\OrganizationMember;
+use App\Models\User\Notification;
 use App\Services\BillingService;
 use App\Services\MercadoPagoService;
+use App\Services\NotificationService;
 use App\Services\StripeConnectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -96,6 +99,11 @@ class OrganizationEventRegistrationController extends Controller
             OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get(),
             $event->currency ?? 'brl'
         );
+
+        if (! $isFree && $gateways->isEmpty()) {
+            $this->notifyNoGateway($organization, $event);
+            return response()->json(['message' => 'no_compatible_gateway'], 422);
+        }
 
         // If multiple gateways and buyer hasn't chosen yet, let them pick
         $chosenGatewayKey = $request->input('gateway');
@@ -297,6 +305,29 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         return response()->json(['message' => ['payment_url' => $paymentUrl]], 200);
+    }
+
+    private function notifyNoGateway($organization, $event): void
+    {
+        // Rate-limit: skip if already notified org members in the last hour
+        $memberIds = OrganizationMember::where('organization_id', $organization->id)
+            ->whereIn('role', ['owner', 'admin', 'financial'])
+            ->pluck('user_id');
+
+        $alreadySent = Notification::whereIn('user_id', $memberIds)
+            ->where('title', 'no_gateway_configured')
+            ->where('created_at', '>=', now()->subHour())
+            ->exists();
+
+        if ($alreadySent) return;
+
+        $route = "/org/{$organization->route}/manage/finances";
+        foreach ($memberIds as $userId) {
+            NotificationService::send($userId, 'no_gateway_configured', [
+                'org'   => $organization->name,
+                'event' => $event->name,
+            ], $route);
+        }
     }
 
     private function eligibleGateways(\Illuminate\Support\Collection $gateways, string $currency): \Illuminate\Support\Collection
