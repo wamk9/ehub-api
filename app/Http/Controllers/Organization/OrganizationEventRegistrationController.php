@@ -147,7 +147,8 @@ class OrganizationEventRegistrationController extends Controller
                     $registration->id,
                     $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
                     $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure",
-                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending"
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending",
+                    $feeAmount
                 );
                 $registration->update(['gateway_preference_id' => $pref['id'], 'gateway' => 'mercadopago']);
                 $paymentUrl = $pref['init_point'];

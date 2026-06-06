@@ -76,7 +76,8 @@ class MercadoPagoService
         string $registrationId,
         string $successUrl,
         string $failureUrl,
-        string $pendingUrl
+        string $pendingUrl,
+        float $marketplaceFee = 0.0
     ): array {
         $response = Http::withToken($accessToken)
             ->post("{$this->baseUrl}/checkout/preferences", [
@@ -86,6 +87,8 @@ class MercadoPagoService
                     'unit_price' => $amount,
                     'currency_id' => strtoupper($currency),
                 ]],
+                'marketplace' => $this->clientId,
+                'marketplace_fee' => round($marketplaceFee, 2),
                 'external_reference' => $registrationId,
                 'back_urls' => [
                     'success' => $successUrl,
