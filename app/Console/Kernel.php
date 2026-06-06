@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // 1st of every month at 06:00 — generate and charge invoices
+        $schedule->command('billing:generate-monthly')->monthlyOn(1, '06:00');
+
+        // Daily at 08:00 — block orgs past 5-day grace period
+        $schedule->command('billing:check-overdue')->dailyAt('08:00');
     }
 
     /**

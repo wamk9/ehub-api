@@ -19,3 +19,8 @@ use Illuminate\Support\Facades\Artisan;
 Route::group(['middleware' => 'auth'], function(){
 
 });
+
+// Serve Vue SPA for all non-API routes (Vue Router history mode)
+Route::get('/{any}', function () {
+    return response()->file(public_path('index.html'));
+})->where('any', '^(?!api|storage|_debugbar).*');

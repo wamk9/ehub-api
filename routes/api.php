@@ -11,7 +11,11 @@ use App\Http\Controllers\EHub\LicenseController;
 use App\Http\Controllers\League\LeagueController;
 use App\Http\Controllers\Organization\OrganizationController;
 use App\Http\Controllers\Organization\ArticleController;
+use App\Http\Controllers\Organization\OrganizationBillingController;
 use App\Http\Controllers\Organization\OrganizationEventController;
+use App\Http\Controllers\Organization\OrganizationEventRegistrationController;
+use App\Http\Controllers\Organization\OrganizationPaymentGatewayController;
+use App\Http\Controllers\Payment\PaymentWebhookController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Tournament\PointEventController;
 use Illuminate\Support\Facades\Route;
@@ -107,6 +111,20 @@ Route::controller(OrganizationEventController::class)->group(function(){
     Route::get('/organization/{orgRoute}/event/{eventRoute}', 'show');
 });
 
+Route::controller(OrganizationEventRegistrationController::class)->group(function(){
+    Route::get('/organization/{orgRoute}/event/{eventRoute}/participants', 'index');
+});
+
+// Payment gateway OAuth callback (redirect, no auth needed)
+Route::get('/payment/gateway/callback/{gateway}', [OrganizationPaymentGatewayController::class, 'callback']);
+
+// Payment webhooks (no auth, verified internally)
+Route::controller(PaymentWebhookController::class)->prefix('payment/webhook')->group(function(){
+    Route::post('/mercadopago',    'mercadopago');
+    Route::post('/stripe',         'stripe');
+    Route::post('/stripe-connect', 'stripeConnect');
+});
+
 Route::middleware('auth:sanctum')->group(function() {
     // Route::resource('users', UserController::class);
     // Route::resource('teams', TeamController::class);
@@ -193,6 +211,24 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::post('/organization/{orgRoute}/event', 'store');
         Route::patch('/organization/{orgRoute}/event/{eventRoute}', 'update');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}', 'destroy');
+    });
+
+    Route::controller(OrganizationEventRegistrationController::class)->group(function(){
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/register', 'store');
+        Route::delete('/organization/{orgRoute}/event/{eventRoute}/register', 'destroy');
+    });
+
+    Route::controller(OrganizationPaymentGatewayController::class)->group(function(){
+        Route::get('/organization/{orgRoute}/payment-gateways', 'index');
+        Route::post('/organization/{orgRoute}/payment-gateway/{gateway}/connect', 'connect');
+        Route::delete('/organization/{orgRoute}/payment-gateway/{gateway}', 'disconnect');
+    });
+
+    Route::controller(OrganizationBillingController::class)->group(function(){
+        Route::get('/organization/{orgRoute}/billing', 'index');
+        Route::post('/organization/{orgRoute}/billing/stripe-setup', 'setupStripe');
+        Route::patch('/organization/{orgRoute}/billing/stripe-setup', 'confirmStripeCard');
+        Route::get('/organization/{orgRoute}/billing/{cycle}', 'invoiceDetails');
     });
 });
 

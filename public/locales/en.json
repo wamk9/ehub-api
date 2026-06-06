@@ -1,0 +1,94 @@
+{
+    "categories": {
+        "running": "Running",
+        "cycling": "Cycling",
+        "swimming": "Swimming",
+        "triathlon": "Triathlon",
+        "hiking": "Hiking",
+        "walking": "Walking",
+        "skating": "Skating",
+        "skiing": "Skiing",
+        "snowboarding": "Snowboarding",
+        "climbing": "Climbing",
+        "adventure_racing": "Adventure Racing",
+        "obstacle_racing": "Obstacle Racing"
+    },
+    "modules": {
+        "org": {
+            "manage": {
+                "event": {
+                    "fee": {
+                        "free": "Free",
+                        "brl": "R$ {fee}",
+                        "usd": "US$ {fee}"
+                    }
+                }
+            }
+        },
+        "image_upload": {
+            "select_image": "Select an image",
+            "change_image": "Change image",
+            "remove_image": "Remove image",
+            "error_invalid_type": "Invalid file type. Please select an image file (jpg, png, gif).",
+            "error_too_large": "File is too large. Please select an image smaller than {maxSize}MB.",
+            "error_generic": "An error occurred while uploading the image. Please try again."
+        },
+        "carouselCards": {
+            "informations_button": "See more information"
+        },
+        "footer": {
+            "about": {
+                "title": "About",
+                "content-p1": "Created in 2025, eHub is a sport event management platform created to easy your event execution. Here you can manage informations, payments and registrations faster and simple. ",
+                "content-p2": " Only want to participate? Here you can register a account and find many events to participate in many categories.",
+                "content-p3": " We are always open to hear your suggestions and feedbacks. Contact us!"
+            },
+            "categories": {
+                "title": "Some Categories"
+            },
+            "contact": {
+                "title": "Contact Us",
+                "email": "contato@johnjohn3d.com.br",
+                "phone": "+55 (11) 99999-9999",
+                "instagram": "@ehubapp"
+            },
+            "rights": {
+                "content": "2025 eHub. A JohnJohn 3D platform - CNPJ: 27.140.814/0001-88"
+            }
+        }
+    },
+    "pages": {
+        "homepage": {
+            "entrance": {
+                "title": "Make it Happen!",
+                "subtitle": "With eHub, your events can be created and managed faster and easily."
+            },
+            "events": {
+                "lastest": "Lastest Created Events",
+                "free": "Free Events",
+                "paid": "Paid Events",
+                "create": {
+                    "title": "Don't find one?",
+                    "subtitle": "Search or create your own event now!",
+                    "create_button": "Create",
+                    "search_button": "Search"
+                }
+            }
+        },
+        "organization": {
+            "create": {
+                "title": "Cool! Thanks for choose us to manage {org_name}!",
+                "subtitle": "After creating your organization in our platform, you will be able to create events!",
+                "form": {
+                    "org_name": "Your organization name (64 characters max)",
+                    "org_identifier": "A unique identifier for your organization (like a username)",
+                    "org_description": "A small description about your organization (180 characters max)",
+                    "org_submit": "Send data to create your organization at eHub"
+                },
+                "tips": {
+                    "image": "Tip: A organization logo is optional, but we recommend you to use square image (1:1 aspect ratio) and a resolution of 500px or more"
+                }
+            }
+        }
+    }
+}

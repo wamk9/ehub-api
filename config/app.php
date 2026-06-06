@@ -59,6 +59,8 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    'viewer_url' => env('VIEWER_URL', 'http://localhost:5173'),
+
     'asset_url' => env('ASSET_URL'),
 
     /*

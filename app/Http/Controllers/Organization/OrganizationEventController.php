@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Organization;
 use App\Http\Controllers\Controller;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationEvent;
+use App\Models\Organization\OrganizationEventRegistration;
+use App\Models\Organization\OrganizationEventStage;
 use App\Models\Organization\OrganizationMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +63,42 @@ class OrganizationEventController extends Controller
         if (!$event)
             return response()->json(['message' => 'event_not_found'], 404);
 
-        return response()->json(['message' => $this->formatEvent($event)], 200);
+        $stages = OrganizationEventStage::where('organization_event_id', $event->id)
+            ->orderBy('stage_order')
+            ->with([
+                'rounds' => fn($q) => $q->orderBy('round_order'),
+                'results' => fn($q) => $q->orderBy('position')->with([
+                    'registration' => fn($q) => $q->with('user:id,name,username,avatar'),
+                ]),
+            ])
+            ->get()
+            ->map(fn($s) => $this->formatStage($s));
+
+        $registrationsCount = OrganizationEventRegistration::where('organization_event_id', $event->id)
+            ->whereIn('payment_status', ['free', 'confirmed'])
+            ->count();
+
+        $userRegistration = null;
+        $authUser = $request->user('sanctum');
+        if ($authUser) {
+            $reg = OrganizationEventRegistration::where('organization_event_id', $event->id)
+                ->where('user_id', $authUser->id)
+                ->first();
+            if ($reg) {
+                $userRegistration = [
+                    'id'             => $reg->id,
+                    'payment_status' => $reg->payment_status,
+                    'confirmed_at'   => $reg->confirmed_at,
+                ];
+            }
+        }
+
+        $data = $this->formatEvent($event);
+        $data['stages']            = $stages;
+        $data['registrations_count'] = $registrationsCount;
+        $data['user_registration'] = $userRegistration;
+
+        return response()->json(['message' => $data], 200);
     }
 
     public function store(Request $request)
@@ -199,6 +236,48 @@ class OrganizationEventController extends Controller
         $event->delete();
 
         return response()->json(['message' => 'Event deleted'], 200);
+    }
+
+    private function formatStage(OrganizationEventStage $stage): array
+    {
+        $data = [
+            'id'          => $stage->id,
+            'name'        => $stage->name,
+            'description' => $stage->description,
+            'stage_type'  => $stage->stage_type,
+            'config'      => $stage->config,
+            'stage_order' => $stage->stage_order,
+            'initialized' => $stage->initialized,
+            'in_progress' => $stage->in_progress,
+            'finished'    => $stage->finished,
+            'start_at'    => $stage->start_at,
+            'rounds'      => $stage->rounds->map(fn($r) => [
+                'id'          => $r->id,
+                'name'        => $r->name,
+                'config'      => $r->config,
+                'round_order' => $r->round_order,
+                'initialized' => $r->initialized,
+                'in_progress' => $r->in_progress,
+                'finished'    => $r->finished,
+                'start_at'    => $r->start_at,
+            ])->values(),
+        ];
+
+        if ($stage->finished) {
+            $data['results'] = $stage->results->map(fn($r) => [
+                'position'  => $r->position,
+                'score'     => $r->score,
+                'qualified' => $r->qualified,
+                'user'      => $r->registration?->user ? [
+                    'id'       => $r->registration->user->id,
+                    'name'     => $r->registration->user->name,
+                    'username' => $r->registration->user->username,
+                    'avatar'   => $r->registration->user->avatar,
+                ] : null,
+            ])->values();
+        }
+
+        return $data;
     }
 
     private function formatEvent(OrganizationEvent $event): array
