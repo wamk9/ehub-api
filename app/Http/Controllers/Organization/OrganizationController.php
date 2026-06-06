@@ -385,12 +385,39 @@ class OrganizationController extends Controller
         if (!$invite)
             return response()->json(['message' => 'invite_invalid'], 404);
 
+        $actor      = $request->user('sanctum');
+        $targetUser = User::where('mail', $invite->email)->first();
+
+        if ($targetUser) {
+            $alreadyMember = OrganizationMember::where('organization_id', $organization->id)
+                ->where('user_id', $targetUser->id)
+                ->exists();
+
+            if (!$alreadyMember) {
+                OrganizationMember::create([
+                    'organization_id' => $organization->id,
+                    'user_id'         => $targetUser->id,
+                    'role'            => $invite->role,
+                ]);
+            }
+
+            $invite->update(['accepted_at' => now()]);
+
+            Mail::to($invite->email)->send(new OrgInviteExistingUser(
+                orgName:     $organization->name,
+                orgRoute:    $organization->route,
+                inviterName: $actor->name . ' ' . $actor->surname,
+                role:        $this->roleLabel($invite->role),
+                inviteToken: '',
+            ));
+
+            return response()->json(['message' => 'Member added'], 200);
+        }
+
         $invite->update([
             'token'      => Str::random(64),
             'expires_at' => now()->addDays(7),
         ]);
-
-        $actor = $request->user('sanctum');
 
         Mail::to($invite->email)->send(new OrgInviteNewUser(
             orgName:      $organization->name,
