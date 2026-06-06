@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Organization;
 use App\Http\Controllers\Controller;
 use App\Mail\OrgInviteExistingUser;
 use App\Mail\OrgInviteNewUser;
+use App\Models\Organization\OrgFollow;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationInvite;
 use App\Models\Organization\OrganizationMember;
 use App\Models\User\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -105,9 +107,13 @@ class OrganizationController extends Controller
         $data = $organization->toArray();
 
         if ($request->user('sanctum')) {
-            $role = $this->getMemberRole($organization->id, $request->user('sanctum')->id);
+            $userId              = $request->user('sanctum')->id;
+            $role                = $this->getMemberRole($organization->id, $userId);
             $data['role']        = $role;
-            $data['my_user_id']  = $request->user('sanctum')->id;
+            $data['my_user_id']  = $userId;
+            $data['is_following'] = OrgFollow::where('organization_id', $organization->id)
+                ->where('user_id', $userId)
+                ->exists();
         }
 
         return response()->json(['message' => $data], 200);
@@ -250,6 +256,13 @@ class OrganizationController extends Controller
                 'user_id'         => $targetUser->id,
                 'role'            => $request->role,
             ]);
+
+            NotificationService::send(
+                $targetUser->id,
+                'notification.member_added',
+                ['org' => $organization->name, 'role' => $roleName],
+                '/org/' . $organization->route
+            );
 
             Mail::to($email)->send(new OrgInviteExistingUser(
                 orgName:     $organization->name,
@@ -490,6 +503,16 @@ class OrganizationController extends Controller
             $invite->update(['accepted_at' => now()]);
         });
 
+        $org = Organization::find($invite->organization_id);
+        if ($org) {
+            NotificationService::send(
+                $user->id,
+                'notification.invite_accepted',
+                ['org' => $org->name, 'role' => $this->roleLabel($invite->role)],
+                '/org/' . $org->route
+            );
+        }
+
         return response()->json(['message' => 'Invite accepted'], 200);
     }
 
@@ -536,6 +559,31 @@ class OrganizationController extends Controller
         $member->update(['role' => $request->role]);
 
         return response()->json(['message' => 'Member role updated'], 200);
+    }
+
+    public function follow(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+        if (!$organization) return response()->json(['message' => 'org_not_found'], 404);
+
+        OrgFollow::firstOrCreate([
+            'organization_id' => $organization->id,
+            'user_id'         => $request->user('sanctum')->id,
+        ]);
+
+        return response()->json(['message' => 'following'], 200);
+    }
+
+    public function unfollow(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+        if (!$organization) return response()->json(['message' => 'org_not_found'], 404);
+
+        OrgFollow::where('organization_id', $organization->id)
+            ->where('user_id', $request->user('sanctum')->id)
+            ->delete();
+
+        return response()->json(['message' => 'unfollowed'], 200);
     }
 
     public function leaveOrganization(Request $request)

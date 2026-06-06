@@ -8,6 +8,7 @@ use App\Models\Organization\OrganizationEvent;
 use App\Models\Organization\OrganizationEventRegistration;
 use App\Models\Organization\OrganizationEventStage;
 use App\Models\Organization\OrganizationMember;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -131,7 +132,8 @@ class OrganizationEventController extends Controller
         if ($routeInUse)
             return response()->json(['message' => 'route_in_use'], 409);
 
-        DB::transaction(function () use ($request, $organization) {
+        $createdEvent = null;
+        DB::transaction(function () use ($request, $organization, &$createdEvent) {
             $event = new OrganizationEvent($request->only([
                 'name', 'short_description', 'description',
                 'fee', 'currency', 'max_registrations',
@@ -156,7 +158,17 @@ class OrganizationEventController extends Controller
             }
 
             $event->save();
+            $createdEvent = $event;
         });
+
+        if ($createdEvent) {
+            NotificationService::sendToFollowers(
+                $organization->id,
+                'notification.event_created',
+                ['org' => $organization->name, 'name' => $createdEvent->name],
+                '/org/' . $organization->route . '/event/' . $createdEvent->route
+            );
+        }
 
         return response()->json(['message' => 'Event created'], 201);
     }

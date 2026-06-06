@@ -142,6 +142,28 @@ class UserController extends Controller
         return response()->json(['message' => 'Notification read', 'status' => true], 200);
     }
 
+    public function deleteNotification(Request $request)
+    {
+        if (!Auth::check())
+            return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+
+        UserNotification::where('id', $request->route('id'))
+            ->where('user_id', auth()->user()->id)
+            ->delete();
+
+        return response()->json(['message' => 'deleted'], 200);
+    }
+
+    public function clearNotifications()
+    {
+        if (!Auth::check())
+            return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+
+        UserNotification::where('user_id', auth()->user()->id)->delete();
+
+        return response()->json(['message' => 'cleared'], 200);
+    }
+
     public function getProfile(Request $request)
     {
         $user = $request->user();

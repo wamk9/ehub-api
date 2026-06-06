@@ -145,6 +145,7 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::get('/notification', 'getNotifications');
         Route::patch('/notification/{id}', 'setNotificationRead');
         Route::delete('/notification/{id}', 'deleteNotification');
+        Route::delete('/notification', 'clearNotifications');
 
         Route::get('/user/token', 'getToken');
 
@@ -202,6 +203,8 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::post('/organization/{orgRoute}/invite/{inviteId}/resend', 'resendInvite');
         Route::delete('/organization/{orgRoute}/invite/{inviteId}', 'removeInvite');
         Route::post('/invite/accept/{token}', 'acceptInvite');
+        Route::post('/organization/{orgRoute}/follow', 'follow');
+        Route::delete('/organization/{orgRoute}/follow', 'unfollow');
     });
 
     Route::controller(ArticleController::class)->group(function(){

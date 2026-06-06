@@ -19,10 +19,11 @@ class Notification extends Model
     ];
 
     protected $fillable = [
+        'user_id',
         'title',
         'description',
         'route',
-        'read_at'
+        'read_at',
     ];
 
     use HasFactory;

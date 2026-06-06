@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization\Article;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationMember;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
@@ -136,6 +137,15 @@ class ArticleController extends Controller
         }
 
         $article->save();
+
+        if ($article->published_at) {
+            NotificationService::sendToFollowers(
+                $org->id,
+                'notification.article_published',
+                ['org' => $org->name, 'title' => $article->title],
+                '/org/' . $org->route . '/news/' . $slug
+            );
+        }
 
         return response()->json(['message' => $article->id], 201);
     }
