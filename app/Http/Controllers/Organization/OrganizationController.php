@@ -106,7 +106,8 @@ class OrganizationController extends Controller
 
         if ($request->user('sanctum')) {
             $role = $this->getMemberRole($organization->id, $request->user('sanctum')->id);
-            $data['role'] = $role;
+            $data['role']        = $role;
+            $data['my_user_id']  = $request->user('sanctum')->id;
         }
 
         return response()->json(['message' => $data], 200);
