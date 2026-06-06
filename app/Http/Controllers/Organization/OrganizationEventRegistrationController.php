@@ -92,9 +92,10 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         $isFree    = (float) $event->fee === 0.0;
-        $gateways  = $isFree ? collect() : OrganizationPaymentGateway::where('organization_id', $organization->id)
-            ->where('active', true)
-            ->get();
+        $gateways  = $isFree ? collect() : $this->eligibleGateways(
+            OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get(),
+            $event->currency ?? 'brl'
+        );
 
         // If multiple gateways and buyer hasn't chosen yet, let them pick
         $chosenGatewayKey = $request->input('gateway');
@@ -260,7 +261,10 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         $chosenGatewayKey = $request->input('gateway');
-        $allGateways = OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get();
+        $allGateways = $this->eligibleGateways(
+            OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get(),
+            $event->currency ?? 'brl'
+        );
 
         if ($allGateways->isEmpty()) return response()->json(['message' => 'no_gateway'], 422);
 
@@ -293,6 +297,15 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         return response()->json(['message' => ['payment_url' => $paymentUrl]], 200);
+    }
+
+    private function eligibleGateways(\Illuminate\Support\Collection $gateways, string $currency): \Illuminate\Support\Collection
+    {
+        // USD/EUR events must use Stripe Connect (MP only supports BRL/ARS/etc)
+        if (in_array(strtolower($currency), ['usd', 'eur'])) {
+            return $gateways->filter(fn ($gw) => $gw->gateway === 'stripe_connect')->values();
+        }
+        return $gateways->values();
     }
 
     private function createPaymentUrl($gateway, $event, $organization, $registration, float $eventFee, float $feeAmount, string $viewerBase): string
