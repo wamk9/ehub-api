@@ -7,6 +7,7 @@ use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationBillingInvoice;
 use App\Models\Organization\OrganizationBillingItem;
 use App\Models\Organization\OrganizationMember;
+use App\Services\NotificationService;
 use App\Services\StripeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -91,6 +92,14 @@ class OrganizationBillingController extends Controller
         app(StripeService::class)->setDefaultPaymentMethod(
             $org->stripe_customer_id,
             $paymentMethodId
+        );
+
+        NotificationService::sendToOrgRoles(
+            $org->id,
+            ['owner', 'admin', 'financial'],
+            'notification.billing_card_saved',
+            ['org' => $org->name],
+            '/org/' . $org->route . '/manage'
         );
 
         return response()->json(['message' => 'card_saved'], 200);

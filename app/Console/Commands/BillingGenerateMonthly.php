@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationBillingInvoice;
 use App\Services\BillingService;
+use App\Services\NotificationService;
 use App\Services\StripeService;
 use Illuminate\Console\Command;
 
@@ -52,6 +53,14 @@ class BillingGenerateMonthly extends Command
                 $invoice = $stripe->chargeInvoice($invoice->load('organization'), $lineItems);
                 $status  = $invoice->status;
                 $this->line("  [{$org->name}] {$cycle}: R\$ " . number_format($item['total'], 2, ',', '.') . " — {$status}");
+
+                NotificationService::sendToOrgRoles(
+                    $org->id,
+                    ['owner', 'admin', 'financial'],
+                    'notification.billing_invoice',
+                    ['cycle' => $cycle, 'org' => $org->name],
+                    '/org/' . $org->route . '/manage'
+                );
             } catch (\Exception $e) {
                 $this->error("  [{$org->name}] Charge failed: " . $e->getMessage());
             }
