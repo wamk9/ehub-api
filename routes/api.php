@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LiveController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\AuthController;
@@ -35,6 +36,8 @@ use Illuminate\Support\Facades\Http;
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });*/
+
+Route::get('/live', [LiveController::class, 'stream']);
 
 Route::get('/test-socket', function () {
     // Static test payload
