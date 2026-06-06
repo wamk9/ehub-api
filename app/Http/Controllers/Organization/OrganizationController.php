@@ -65,10 +65,15 @@ class OrganizationController extends Controller
 
             $organization->save();
 
+            $userId = $request->user('sanctum')->id;
             OrganizationMember::create([
                 'organization_id' => $organization->id,
-                'user_id'         => $request->user('sanctum')->id,
+                'user_id'         => $userId,
                 'role'            => 'owner',
+            ]);
+            OrgFollow::firstOrCreate([
+                'organization_id' => $organization->id,
+                'user_id'         => $userId,
             ]);
         });
 
@@ -256,6 +261,10 @@ class OrganizationController extends Controller
                 'user_id'         => $targetUser->id,
                 'role'            => $request->role,
             ]);
+            OrgFollow::firstOrCreate([
+                'organization_id' => $organization->id,
+                'user_id'         => $targetUser->id,
+            ]);
 
             NotificationService::send(
                 $targetUser->id,
@@ -414,6 +423,10 @@ class OrganizationController extends Controller
                     'role'            => $invite->role,
                 ]);
             }
+            OrgFollow::firstOrCreate([
+                'organization_id' => $organization->id,
+                'user_id'         => $targetUser->id,
+            ]);
 
             $invite->update(['accepted_at' => now()]);
 
@@ -498,6 +511,10 @@ class OrganizationController extends Controller
                 'organization_id' => $invite->organization_id,
                 'user_id'         => $user->id,
                 'role'            => $invite->role,
+            ]);
+            OrgFollow::firstOrCreate([
+                'organization_id' => $invite->organization_id,
+                'user_id'         => $user->id,
             ]);
 
             $invite->update(['accepted_at' => now()]);
