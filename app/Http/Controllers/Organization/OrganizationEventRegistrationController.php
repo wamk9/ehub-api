@@ -184,6 +184,138 @@ class OrganizationEventRegistrationController extends Controller
         ], 201);
     }
 
+    public function checkPayment(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+        if (! $organization) return response()->json(['message' => 'org_not_found'], 404);
+
+        $event = OrganizationEvent::where('organization_id', $organization->id)
+            ->where('route', $request->route('eventRoute'))
+            ->first();
+        if (! $event) return response()->json(['message' => 'event_not_found'], 404);
+
+        $userId = $request->user('sanctum')->id;
+        $registration = OrganizationEventRegistration::where('organization_event_id', $event->id)
+            ->where('user_id', $userId)
+            ->first();
+        if (! $registration) return response()->json(['message' => 'not_registered'], 404);
+
+        if (in_array($registration->payment_status, ['confirmed', 'free'])) {
+            return response()->json(['message' => ['status' => $registration->payment_status]], 200);
+        }
+
+        $gateway = OrganizationPaymentGateway::where('organization_id', $organization->id)
+            ->where('active', true)->first();
+
+        if ($gateway && $registration->gateway_preference_id) {
+            try {
+                if ($gateway->gateway === 'mercadopago') {
+                    $token   = Crypt::decryptString($gateway->access_token);
+                    $results = app(MercadoPagoService::class)
+                        ->searchPaymentsByExternalReference($token, $registration->id);
+                    foreach ($results['results'] ?? [] as $payment) {
+                        if ($payment['status'] === 'approved') {
+                            $registration->update([
+                                'payment_status'    => 'confirmed',
+                                'gateway_payment_id'=> (string) $payment['id'],
+                                'gateway'           => 'mercadopago',
+                                'confirmed_at'      => now(),
+                            ]);
+                            return response()->json(['message' => ['status' => 'confirmed']], 200);
+                        }
+                    }
+                } elseif ($gateway->gateway === 'stripe_connect') {
+                    $session = app(StripeConnectService::class)->getCheckoutSession(
+                        $registration->gateway_preference_id,
+                        $gateway->gateway_user_id
+                    );
+                    if (($session['payment_status'] ?? '') === 'paid') {
+                        $paymentIntentId = $session['payment_intent'] ?? $registration->gateway_preference_id;
+                        $registration->update([
+                            'payment_status'    => 'confirmed',
+                            'gateway_payment_id'=> $paymentIntentId,
+                            'gateway'           => 'stripe_connect',
+                            'confirmed_at'      => now(),
+                        ]);
+                        return response()->json(['message' => ['status' => 'confirmed']], 200);
+                    }
+                }
+            } catch (\Exception $e) {
+                // gateway unreachable — fall through with current status
+            }
+        }
+
+        return response()->json(['message' => ['status' => $registration->payment_status]], 200);
+    }
+
+    public function retryPayment(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+        if (! $organization) return response()->json(['message' => 'org_not_found'], 404);
+
+        $event = OrganizationEvent::where('organization_id', $organization->id)
+            ->where('route', $request->route('eventRoute'))
+            ->first();
+        if (! $event) return response()->json(['message' => 'event_not_found'], 404);
+
+        $userId = $request->user('sanctum')->id;
+        $registration = OrganizationEventRegistration::where('organization_event_id', $event->id)
+            ->where('user_id', $userId)
+            ->first();
+        if (! $registration) return response()->json(['message' => 'not_registered'], 404);
+        if ($registration->payment_status !== 'pending') {
+            return response()->json(['message' => 'not_pending'], 422);
+        }
+
+        $gateway = OrganizationPaymentGateway::where('organization_id', $organization->id)
+            ->where('active', true)->first();
+        if (! $gateway) return response()->json(['message' => 'no_gateway'], 422);
+
+        $viewerBase = config('app.viewer_url', 'http://localhost:5173');
+        $eventFee   = (float) $event->fee;
+        $feeAmount  = app(BillingService::class)->calculateFee($eventFee);
+
+        try {
+            if ($gateway->gateway === 'mercadopago') {
+                $accessToken = Crypt::decryptString($gateway->access_token);
+                $pref = app(MercadoPagoService::class)->createPreference(
+                    $accessToken,
+                    $event->name,
+                    $eventFee,
+                    $event->currency ?? 'brl',
+                    $registration->id,
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure",
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=pending",
+                    $feeAmount
+                );
+                $registration->update(['gateway_preference_id' => $pref['id']]);
+                $paymentUrl = $pref['init_point'];
+            } else {
+                $connectedAccountId = $gateway->gateway_user_id;
+                $amountCents = (int) round($eventFee * 100);
+                $feeCents    = (int) round($feeAmount * 100);
+                $currency    = strtolower($event->currency ?? 'brl');
+                $session = app(StripeConnectService::class)->createCheckoutSession(
+                    $connectedAccountId,
+                    $event->name,
+                    $amountCents,
+                    $currency,
+                    $feeCents,
+                    $registration->id,
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=success",
+                    $viewerBase."/org/{$organization->route}/event/{$event->route}?payment=failure"
+                );
+                $registration->update(['gateway_preference_id' => $session['id']]);
+                $paymentUrl = $session['url'];
+            }
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'gateway_error'], 500);
+        }
+
+        return response()->json(['message' => ['payment_url' => $paymentUrl]], 200);
+    }
+
     public function destroy(Request $request)
     {
         $organization = Organization::where('route', $request->route('orgRoute'))->first();

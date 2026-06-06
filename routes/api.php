@@ -223,6 +223,8 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::controller(OrganizationEventRegistrationController::class)->group(function(){
         Route::post('/organization/{orgRoute}/event/{eventRoute}/register', 'store');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}/register', 'destroy');
+        Route::get('/organization/{orgRoute}/event/{eventRoute}/register/payment-check', 'checkPayment');
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/register/payment-retry', 'retryPayment');
     });
 
     Route::controller(OrganizationPaymentGatewayController::class)->group(function(){

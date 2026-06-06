@@ -106,6 +106,22 @@ class MercadoPagoService
         return $response->json();
     }
 
+    public function searchPaymentsByExternalReference(string $accessToken, string $externalRef): array
+    {
+        $response = Http::withToken($accessToken)
+            ->get("{$this->baseUrl}/v1/payments/search", [
+                'external_reference' => $externalRef,
+                'sort' => 'date_created',
+                'criteria' => 'desc',
+            ]);
+
+        if (! $response->successful()) {
+            return ['results' => []];
+        }
+
+        return $response->json();
+    }
+
     public function getPayment(string $accessToken, string $paymentId): array
     {
         $response = Http::withToken($accessToken)
