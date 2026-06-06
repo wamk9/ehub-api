@@ -193,6 +193,7 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::post('/organization/{orgRoute}/member', 'addMember');
         Route::patch('/organization/{orgRoute}/member/{userId}', 'updateMemberRole');
         Route::delete('/organization/{orgRoute}/member/{userId}', 'removeMember');
+        Route::post('/organization/{orgRoute}/leave', 'leaveOrganization');
         Route::post('/organization/{orgRoute}/transfer-ownership', 'transferOwnership');
         Route::get('/organization/{orgRoute}/invites', 'getInvites');
         Route::post('/organization/{orgRoute}/invite/{inviteId}/resend', 'resendInvite');

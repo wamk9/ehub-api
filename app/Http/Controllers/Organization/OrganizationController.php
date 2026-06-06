@@ -538,6 +538,28 @@ class OrganizationController extends Controller
         return response()->json(['message' => 'Member role updated'], 200);
     }
 
+    public function leaveOrganization(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+
+        if (!$organization)
+            return response()->json(['message' => 'Organization not found'], 404);
+
+        $member = OrganizationMember::where('organization_id', $organization->id)
+            ->where('user_id', $request->user('sanctum')->id)
+            ->first();
+
+        if (!$member)
+            return response()->json(['message' => 'Not a member'], 404);
+
+        if ($member->role === 'owner')
+            return response()->json(['message' => 'owner_cannot_leave'], 403);
+
+        $member->delete();
+
+        return response()->json(['message' => 'Left organization'], 200);
+    }
+
     public function removeMember(Request $request)
     {
         $organization = Organization::where('route', $request->route('orgRoute'))->first();
