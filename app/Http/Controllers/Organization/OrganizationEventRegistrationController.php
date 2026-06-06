@@ -35,7 +35,7 @@ class OrganizationEventRegistrationController extends Controller
 
         $registrations = OrganizationEventRegistration::where('organization_event_id', $event->id)
             ->whereIn('payment_status', ['free', 'confirmed'])
-            ->with('user:id,name,username,avatar')
+            ->with('user:id,name,username')
             ->orderBy('created_at')
             ->get()
             ->map(fn ($r) => [
@@ -47,7 +47,6 @@ class OrganizationEventRegistrationController extends Controller
                     'id' => $r->user->id,
                     'name' => $r->user->name,
                     'username' => $r->user->username,
-                    'avatar' => $r->user->avatar,
                 ] : null,
             ]);
 
