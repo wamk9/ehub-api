@@ -2,6 +2,7 @@
 
 namespace App\Models\Payment;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,10 +12,7 @@ class Currency extends Model
 
     protected $table = 'currencies';
 
-    protected $fillable = [
-        'country_iso_code',
-        'currency_iso_code'
-    ];
+    protected $fillable = ['name', 'iso_code', 'symbol'];
 
-    use HasFactory;
+    use HasFactory, HasUuids;
 }

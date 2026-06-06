@@ -1,32 +1,16 @@
-<?php
-
+﻿<?php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
+return new class extends Migration {
+    public function up(): void {
         Schema::create('point_rounds', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('name');
-            $table->bigInteger('point_event_id')->unsigned();
-
-            $table->foreign('point_event_id')->references('id')->on('point_events')->cascadeOnUpdate()->cascadeOnDelete();
-
+            $table->uuid('point_event_id');
             $table->timestamps();
+            $table->foreign('point_event_id')->references('id')->on('point_events')->cascadeOnUpdate()->cascadeOnDelete();
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('point_rounds');
-    }
+    public function down(): void { Schema::dropIfExists('point_rounds'); }
 };

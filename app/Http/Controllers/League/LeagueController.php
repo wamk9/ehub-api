@@ -31,12 +31,11 @@ class LeagueController extends Controller
 
             $validateLeague = Validator::make($request->only($dataToGet), [
                 'name' => 'required',
-                'route' => 'required'
+                'route' => 'required|unique:leagues,route'
             ]);
 
-            if($validateLeague->fails()){
-                throw ValidationException::withMessages($validateLeague->messages()->all());
-            }
+            if($validateLeague->fails())
+                throw ValidationException:: withMessages($validateLeague->messages()->toArray());
 
             $league = new League($request->only($dataToGet));
 

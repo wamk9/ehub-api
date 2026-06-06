@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->id();
-            $table->bigInteger('user_id')->unsigned();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id');
             $table->string('title');
             $table->string('description');
             $table->string('route')->nullable();

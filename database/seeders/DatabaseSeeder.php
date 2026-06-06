@@ -13,12 +13,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $seedersToCall = [
-            CreateAdminUserSeeder::class,
-            CreateCurrenciesValuesSeeder::class,
-            CreatePlansValuesSeeder::class,
-            CreateCategoriesValuesSeeder::class,
-            CreateSubCategoriesValuesSeeder::class,
-            CreateDemoValuesSeeder::class
+            RunmodeSeeder::class,
+            CurrencySeeder::class,
+            CategorySeeder::class,
+            DemoSeeder::class,
         ];
 
         $this->call($seedersToCall);

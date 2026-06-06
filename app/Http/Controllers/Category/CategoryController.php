@@ -9,17 +9,16 @@ use Illuminate\Support\Facades\Auth;
 
 class CategoryController extends Controller
 {
-    public function show()
+    public function showCategories()
     {
-        // Need initialize because we need push info to array
-        $categories = [];
-
-        foreach (Category::all() as $category)
-        {
-            $category['subcategories'] = $category->subcategories;
-            $categories[] = $category;
-        }
-
+        $categories = Category::with('runmodes:id,key')->get();
         return response()->json(['message' => $categories], 200);
+    }
+
+    public function showSubCategories(Request $request)
+    {
+        $category = Category::where('route', $request->route('categoryRoute'))->first();
+        $subcategories = $category->subcategories;
+        return response()->json(['message' => $subcategories], 200);
     }
 }

@@ -2,24 +2,26 @@
 
 namespace App\Models\Category;
 
+use App\Models\EHub\Runmode;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Category extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = [
-        'name',
-        'description',
-        'route'
-    ];
+    protected $fillable = ['name', 'description', 'route'];
 
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     public function subcategories()
     {
         return $this->hasMany(SubCategory::class, 'category_id');
+    }
+
+    public function runmodes()
+    {
+        return $this->belongsToMany(Runmode::class, 'category_runmode', 'category_id', 'runmode_id');
     }
 }
