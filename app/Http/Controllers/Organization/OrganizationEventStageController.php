@@ -77,10 +77,6 @@ class OrganizationEventStageController extends Controller
             return $err;
         }
 
-        if ($event->initialized) {
-            return response()->json(['message' => 'event_already_initialized'], 422);
-        }
-
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'route' => 'required|string|max:100|regex:/^[a-z0-9\-]+$/',
@@ -129,10 +125,6 @@ class OrganizationEventStageController extends Controller
             return $err;
         }
 
-        if ($event->initialized) {
-            return response()->json(['message' => 'event_already_initialized'], 422);
-        }
-
         $stageKey = $request->route('stageRoute');
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
             ->where('route', $stageKey)
@@ -143,6 +135,10 @@ class OrganizationEventStageController extends Controller
 
         if (! $stage) {
             return response()->json(['message' => 'stage_not_found'], 404);
+        }
+
+        if ($stage->initialized) {
+            return response()->json(['message' => 'stage_already_started'], 422);
         }
 
         $validator = Validator::make($request->all(), [
@@ -184,16 +180,16 @@ class OrganizationEventStageController extends Controller
             return $err;
         }
 
-        if ($event->initialized) {
-            return response()->json(['message' => 'event_already_initialized'], 422);
-        }
-
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
             ->where('route', $request->route('stageRoute'))
             ->first();
 
         if (! $stage) {
             return response()->json(['message' => 'stage_not_found'], 404);
+        }
+
+        if ($stage->initialized) {
+            return response()->json(['message' => 'stage_already_started'], 422);
         }
 
         $stage->delete();
