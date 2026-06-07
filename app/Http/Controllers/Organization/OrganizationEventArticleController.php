@@ -262,7 +262,7 @@ class OrganizationEventArticleController extends Controller
         $route = '/org/' . $orgRoute . '/event/' . $event->route;
 
         foreach ($userIds as $userId) {
-            NotificationService::send($userId, 'event_article_published', [
+            NotificationService::send($userId, 'notification.event_article_published', [
                 'event' => $event->name,
                 'title' => $article->title,
             ], $route);

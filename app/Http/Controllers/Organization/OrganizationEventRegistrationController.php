@@ -314,7 +314,7 @@ class OrganizationEventRegistrationController extends Controller
             ->pluck('user_id');
 
         $alreadySent = Notification::whereIn('user_id', $memberIds)
-            ->where('title', 'no_gateway_configured')
+            ->where('title', 'notification.no_gateway_configured')
             ->where('created_at', '>=', now()->subHour())
             ->exists();
 
@@ -322,7 +322,7 @@ class OrganizationEventRegistrationController extends Controller
 
         $route = "/org/{$organization->route}/manage/finances";
         foreach ($memberIds as $userId) {
-            NotificationService::send($userId, 'no_gateway_configured', [
+            NotificationService::send($userId, 'notification.no_gateway_configured', [
                 'org'   => $organization->name,
                 'event' => $event->name,
             ], $route);
