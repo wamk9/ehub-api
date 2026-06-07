@@ -8,8 +8,10 @@ use App\Models\Organization\OrganizationEvent;
 use App\Models\Organization\OrganizationEventStage;
 use App\Models\Organization\OrganizationMember;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Image;
 
 class OrganizationEventStageController extends Controller
 {
@@ -49,6 +51,24 @@ class OrganizationEventStageController extends Controller
         return [$organization, $event, null];
     }
 
+    private function savePreviewImage(Request $request, Organization $organization, OrganizationEvent $event, OrganizationEventStage $stage): void
+    {
+        if (! $request->filled('preview_image') || ! $stage->route) {
+            return;
+        }
+
+        $path = storage_path('app/public/org/'.$organization->route.'/event/'.$event->route.'/stage/'.$stage->route);
+
+        if (! File::isDirectory($path)) {
+            File::makeDirectory($path, 0755, true, true);
+        }
+
+        Image::make($request->preview_image)
+            ->fit(1200, 675)
+            ->encode('webp', 90)
+            ->save($path.'/preview.webp');
+    }
+
     public function store(Request $request)
     {
         [$organization, $event, $err] = $this->resolveEventAndOrg($request);
@@ -62,14 +82,24 @@ class OrganizationEventStageController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'route' => 'required|string|max:100|regex:/^[a-z0-9\-]+$/',
             'stage_type' => 'required|string|in:points,bracket',
             'description' => 'nullable|string',
             'start_at' => 'nullable|date',
             'config' => 'nullable|array',
+            'preview_image' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             throw ValidationException::withMessages($validator->messages()->toArray());
+        }
+
+        $routeInUse = OrganizationEventStage::where('organization_event_id', $event->id)
+            ->where('route', $request->input('route'))
+            ->exists();
+
+        if ($routeInUse) {
+            return response()->json(['message' => 'route_in_use'], 409);
         }
 
         $maxOrder = OrganizationEventStage::where('organization_event_id', $event->id)
@@ -78,6 +108,7 @@ class OrganizationEventStageController extends Controller
         $stage = OrganizationEventStage::create([
             'organization_event_id' => $event->id,
             'name' => $request->input('name'),
+            'route' => $request->input('route'),
             'description' => $request->input('description'),
             'stage_type' => $request->input('stage_type'),
             'config' => $request->input('config', []),
@@ -85,7 +116,9 @@ class OrganizationEventStageController extends Controller
             'start_at' => $request->input('start_at'),
         ]);
 
-        return response()->json(['message' => $this->formatStage($stage)], 201);
+        $this->savePreviewImage($request, $organization, $event, $stage);
+
+        return response()->json(['message' => $this->formatStage($stage, $organization, $event)], 201);
     }
 
     public function update(Request $request)
@@ -109,19 +142,34 @@ class OrganizationEventStageController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
+            'route' => 'sometimes|string|max:100|regex:/^[a-z0-9\-]+$/',
             'stage_type' => 'sometimes|string|in:points,bracket',
             'description' => 'nullable|string',
             'start_at' => 'nullable|date',
             'config' => 'nullable|array',
+            'preview_image' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             throw ValidationException::withMessages($validator->messages()->toArray());
         }
 
-        $stage->update($request->only(['name', 'description', 'stage_type', 'config', 'start_at']));
+        if ($request->filled('route') && $request->input('route') !== $stage->route) {
+            $routeInUse = OrganizationEventStage::where('organization_event_id', $event->id)
+                ->where('route', $request->input('route'))
+                ->where('id', '!=', $stage->id)
+                ->exists();
 
-        return response()->json(['message' => $this->formatStage($stage->fresh())], 200);
+            if ($routeInUse) {
+                return response()->json(['message' => 'route_in_use'], 409);
+            }
+        }
+
+        $stage->update($request->only(['name', 'route', 'description', 'stage_type', 'config', 'start_at']));
+
+        $this->savePreviewImage($request, $organization, $event, $stage->fresh());
+
+        return response()->json(['message' => $this->formatStage($stage->fresh(), $organization, $event)], 200);
     }
 
     public function destroy(Request $request)
@@ -148,11 +196,21 @@ class OrganizationEventStageController extends Controller
         return response()->json(['message' => 'stage_deleted'], 200);
     }
 
-    private function formatStage(OrganizationEventStage $stage): array
+    private function formatStage(OrganizationEventStage $stage, Organization $organization = null, OrganizationEvent $event = null): array
     {
+        $previewImage = null;
+        if ($stage->route && $organization && $event) {
+            $filePath = storage_path('app/public/org/'.$organization->route.'/event/'.$event->route.'/stage/'.$stage->route.'/preview.webp');
+            if (file_exists($filePath)) {
+                $previewImage = 'org/'.$organization->route.'/event/'.$event->route.'/stage/'.$stage->route.'/preview.webp';
+            }
+        }
+
         return [
             'id' => $stage->id,
             'name' => $stage->name,
+            'route' => $stage->route,
+            'preview_image' => $previewImage,
             'description' => $stage->description,
             'stage_type' => $stage->stage_type,
             'config' => $stage->config,

@@ -13,17 +13,17 @@ class OrganizationEventStage extends Model
     protected $table = 'organization_event_stages';
 
     protected $fillable = [
-        'organization_event_id', 'name', 'description',
+        'organization_event_id', 'name', 'route', 'description',
         'stage_type', 'config', 'stage_order',
         'initialized', 'in_progress', 'finished', 'start_at',
     ];
 
     protected $casts = [
-        'config'      => 'array',
+        'config' => 'array',
         'initialized' => 'boolean',
         'in_progress' => 'boolean',
-        'finished'    => 'boolean',
-        'start_at'    => 'datetime',
+        'finished' => 'boolean',
+        'start_at' => 'datetime',
     ];
 
     public function event()

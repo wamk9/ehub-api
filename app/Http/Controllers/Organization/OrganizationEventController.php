@@ -76,7 +76,7 @@ class OrganizationEventController extends Controller
                 ]),
             ])
             ->get()
-            ->map(fn ($s) => $this->formatStage($s));
+            ->map(fn ($s) => $this->formatStage($s, $organization, $event));
 
         $registrationsCount = OrganizationEventRegistration::where('organization_event_id', $event->id)
             ->whereIn('payment_status', ['free', 'confirmed'])
@@ -302,11 +302,21 @@ class OrganizationEventController extends Controller
         return response()->json(['message' => 'Event deleted'], 200);
     }
 
-    private function formatStage(OrganizationEventStage $stage): array
+    private function formatStage(OrganizationEventStage $stage, Organization $organization = null, OrganizationEvent $event = null): array
     {
+        $previewImage = null;
+        if ($stage->route && $organization && $event) {
+            $filePath = storage_path('app/public/org/'.$organization->route.'/event/'.$event->route.'/stage/'.$stage->route.'/preview.webp');
+            if (file_exists($filePath)) {
+                $previewImage = 'org/'.$organization->route.'/event/'.$event->route.'/stage/'.$stage->route.'/preview.webp';
+            }
+        }
+
         $data = [
             'id' => $stage->id,
             'name' => $stage->name,
+            'route' => $stage->route,
+            'preview_image' => $previewImage,
             'description' => $stage->description,
             'stage_type' => $stage->stage_type,
             'config' => $stage->config,
