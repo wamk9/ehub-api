@@ -227,6 +227,7 @@ Route::middleware('auth:sanctum')->group(function() {
     });
 
     Route::controller(OrganizationEventRegistrationController::class)->group(function(){
+        Route::get('/organization/{orgRoute}/event/{eventRoute}/manage/participants', 'manage');
         Route::post('/organization/{orgRoute}/event/{eventRoute}/register', 'store');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}/register', 'destroy');
         Route::get('/organization/{orgRoute}/event/{eventRoute}/register/payment-check', 'checkPayment');

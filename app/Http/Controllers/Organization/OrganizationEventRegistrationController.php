@@ -53,6 +53,48 @@ class OrganizationEventRegistrationController extends Controller
         return response()->json(['message' => $registrations->values()], 200);
     }
 
+    public function manage(Request $request)
+    {
+        $organization = Organization::where('route', $request->route('orgRoute'))->first();
+        if (! $organization) {
+            return response()->json(['message' => 'org_not_found'], 404);
+        }
+
+        $member = OrganizationMember::where('organization_id', $organization->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+        if (! $member) {
+            return response()->json(['message' => 'forbidden'], 403);
+        }
+
+        $event = OrganizationEvent::where('organization_id', $organization->id)
+            ->where('route', $request->route('eventRoute'))
+            ->first();
+        if (! $event) {
+            return response()->json(['message' => 'event_not_found'], 404);
+        }
+
+        $registrations = OrganizationEventRegistration::where('organization_event_id', $event->id)
+            ->with('user:id,name,username')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($r) => [
+                'id'             => $r->id,
+                'payment_status' => $r->payment_status,
+                'gateway'        => $r->gateway,
+                'form_data'      => $r->form_data,
+                'confirmed_at'   => $r->confirmed_at,
+                'registered_at'  => $r->created_at,
+                'user' => $r->user ? [
+                    'id'       => $r->user->id,
+                    'name'     => $r->user->name,
+                    'username' => $r->user->username,
+                ] : null,
+            ]);
+
+        return response()->json(['message' => $registrations->values()], 200);
+    }
+
     public function store(Request $request)
     {
         $organization = Organization::where('route', $request->route('orgRoute'))->first();
