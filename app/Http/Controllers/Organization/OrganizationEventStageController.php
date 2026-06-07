@@ -133,8 +133,12 @@ class OrganizationEventStageController extends Controller
             return response()->json(['message' => 'event_already_initialized'], 422);
         }
 
+        $stageKey = $request->route('stageRoute');
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
-            ->where('route', $request->route('stageRoute'))
+            ->where('route', $stageKey)
+            ->first()
+            ?? OrganizationEventStage::where('organization_event_id', $event->id)
+            ->where('id', $stageKey)
             ->first();
 
         if (! $stage) {
