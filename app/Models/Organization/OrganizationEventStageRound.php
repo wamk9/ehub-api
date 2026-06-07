@@ -18,11 +18,11 @@ class OrganizationEventStageRound extends Model
     ];
 
     protected $casts = [
-        'config'      => 'array',
+        'config' => 'array',
         'initialized' => 'boolean',
         'in_progress' => 'boolean',
-        'finished'    => 'boolean',
-        'start_at'    => 'datetime',
+        'finished' => 'boolean',
+        'start_at' => 'datetime',
     ];
 
     public function stage()

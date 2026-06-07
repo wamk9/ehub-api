@@ -14,15 +14,17 @@ class EventFormController extends Controller
     public function getForm(Request $request)
     {
         $categoryRoute = $request->route('categoryRoute');
-        $runmodeKey    = $request->route('runmodeKey');
+        $runmodeKey = $request->route('runmodeKey');
 
         $category = Category::where('route', $categoryRoute)->first();
-        if (!$category)
+        if (! $category) {
             return response()->json(['message' => 'category_not_found'], 404);
+        }
 
         $runmode = Runmode::where('key', $runmodeKey)->first();
-        if (!$runmode)
+        if (! $runmode) {
             return response()->json(['message' => 'runmode_not_found'], 404);
+        }
 
         $subcategoryId = $request->query('subcategory')
             ? \App\Models\Category\SubCategory::where('route', $request->query('subcategory'))
@@ -38,11 +40,11 @@ class EventFormController extends Controller
 
         return response()->json([
             'message' => [
-                'schema_id'         => $schema?->id,
+                'schema_id' => $schema?->id,
                 'schema_updated_at' => $schema?->created_at,
-                'basic'             => EventFormSchemaSeeder::basicForm(),
-                'advanced'          => $advancedForm,
-            ]
+                'basic' => EventFormSchemaSeeder::basicForm(),
+                'advanced' => $advancedForm,
+            ],
         ], 200);
     }
 }

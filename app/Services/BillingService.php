@@ -2,17 +2,19 @@
 
 namespace App\Services;
 
-use App\Models\Organization\OrganizationBillingItem;
 use App\Models\Organization\OrganizationBillingInvoice;
+use App\Models\Organization\OrganizationBillingItem;
 use App\Models\Organization\OrganizationEventRegistration;
 use Carbon\Carbon;
 
 class BillingService
 {
     // Platform fee config
-    const FEE_PERCENT     = 2.0;    // 2%
-    const FEE_MIN_BRL     = 1.00;   // R$1 minimum for paid events
-    const FREE_EVENT_FEE  = 1.00;   // R$1 per registration on free events
+    const FEE_PERCENT = 2.0;    // 2%
+
+    const FEE_MIN_BRL = 1.00;   // R$1 minimum for paid events
+
+    const FREE_EVENT_FEE = 1.00;   // R$1 per registration on free events
 
     public function calculateFee(float $eventFee): float
     {
@@ -21,19 +23,20 @@ class BillingService
         }
 
         $fee = $eventFee * (self::FEE_PERCENT / 100);
+
         return max($fee, self::FEE_MIN_BRL);
     }
 
     public function recordRegistrationFee(OrganizationEventRegistration $registration, float $eventFee): OrganizationBillingItem
     {
-        $fee  = $this->calculateFee($eventFee);
+        $fee = $this->calculateFee($eventFee);
         $type = $eventFee > 0 ? 'registration_paid' : 'registration_free';
 
         return OrganizationBillingItem::create([
             'organization_id' => $registration->event->organization_id,
             'registration_id' => $registration->id,
-            'billing_type'    => $type,
-            'fee_amount'      => $fee,
+            'billing_type' => $type,
+            'fee_amount' => $fee,
         ]);
     }
 
@@ -58,14 +61,14 @@ class BillingService
                 ['organization_id' => $orgId, 'billing_cycle' => $cycle],
                 [
                     'total_amount' => $total,
-                    'status'       => $total > 0 ? 'pending' : 'empty',
-                    'due_date'     => Carbon::createFromFormat('Y-m', $cycle)->startOfMonth()->addMonth()->startOfMonth(),
+                    'status' => $total > 0 ? 'pending' : 'empty',
+                    'due_date' => Carbon::createFromFormat('Y-m', $cycle)->startOfMonth()->addMonth()->startOfMonth(),
                 ]
             );
 
-            $items->each(fn($item) => $item->update([
+            $items->each(fn ($item) => $item->update([
                 'billing_cycle' => $cycle,
-                'invoice_id'    => $invoice->id,
+                'invoice_id' => $invoice->id,
             ]));
 
             $results[] = ['organization_id' => $orgId, 'invoice_id' => $invoice->id, 'total' => $total];

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::defaultStringLength(191);
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('id')->primary();;
+            $table->uuid('id')->primary();
             $table->string('name', 180);
             $table->string('surname', 180);
             $table->string('username')->unique();

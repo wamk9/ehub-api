@@ -1,9 +1,13 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-return new class extends Migration {
-    public function up(): void {
+
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::create('hierarchies', function (Blueprint $table) {
             $table->uuid('id');
             $table->string('name');
@@ -14,5 +18,9 @@ return new class extends Migration {
             $table->foreign('league_id')->references('id')->on('leagues')->cascadeOnUpdate()->cascadeOnDelete();
         });
     }
-    public function down(): void { Schema::dropIfExists('hierarchies'); }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('hierarchies');
+    }
 };

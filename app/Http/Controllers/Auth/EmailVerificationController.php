@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Validator;
 
 class EmailVerificationController extends Controller
 {
-    private const TTL      = 600;   // 10 minutes
+    private const TTL = 600;   // 10 minutes
+
     private const MAX_TRIES = 5;
 
     public function sendCode(Request $request)
@@ -45,26 +46,29 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Dados inválidos.'], 422);
         }
 
-        $mail  = strtolower($request->mail);
+        $mail = strtolower($request->mail);
         $entry = Cache::get("ev:{$mail}");
 
-        if (!$entry) {
+        if (! $entry) {
             return response()->json(['message' => 'Código expirado ou não solicitado.'], 422);
         }
 
         if ($entry['tries'] >= self::MAX_TRIES) {
             Cache::forget("ev:{$mail}");
+
             return response()->json(['message' => 'Muitas tentativas. Solicite um novo código.'], 429);
         }
 
         if ($entry['code'] !== $request->code) {
             $entry['tries']++;
             Cache::put("ev:{$mail}", $entry, self::TTL);
+
             return response()->json(['message' => 'Código incorreto.'], 422);
         }
 
         Cache::forget("ev:{$mail}");
         Cache::put("ev_verified:{$mail}", true, 300); // 5 min to complete registration
+
         return response()->json(['message' => 'E-mail verificado.'], 200);
     }
 }

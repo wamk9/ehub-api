@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationEvent;
 use App\Models\Organization\OrganizationEventRegistration;
-use App\Models\Organization\OrganizationPaymentGateway;
 use App\Models\Organization\OrganizationMember;
+use App\Models\Organization\OrganizationPaymentGateway;
 use App\Models\User\Notification;
 use App\Services\BillingService;
 use App\Services\MercadoPagoService;
@@ -79,15 +79,15 @@ class OrganizationEventRegistrationController extends Controller
             ->orderBy('created_at')
             ->get()
             ->map(fn ($r) => [
-                'id'             => $r->id,
+                'id' => $r->id,
                 'payment_status' => $r->payment_status,
-                'gateway'        => $r->gateway,
-                'form_data'      => $r->form_data,
-                'confirmed_at'   => $r->confirmed_at,
-                'registered_at'  => $r->created_at,
+                'gateway' => $r->gateway,
+                'form_data' => $r->form_data,
+                'confirmed_at' => $r->confirmed_at,
+                'registered_at' => $r->created_at,
                 'user' => $r->user ? [
-                    'id'       => $r->user->id,
-                    'name'     => $r->user->name,
+                    'id' => $r->user->id,
+                    'name' => $r->user->name,
                     'username' => $r->user->username,
                 ] : null,
             ]);
@@ -135,14 +135,15 @@ class OrganizationEventRegistrationController extends Controller
             return response()->json(['message' => 'already_registered'], 409);
         }
 
-        $isFree    = (float) $event->fee === 0.0;
-        $gateways  = $isFree ? collect() : $this->eligibleGateways(
+        $isFree = (float) $event->fee === 0.0;
+        $gateways = $isFree ? collect() : $this->eligibleGateways(
             OrganizationPaymentGateway::where('organization_id', $organization->id)->where('active', true)->get(),
             $event->currency ?? 'brl'
         );
 
         if (! $isFree && $gateways->isEmpty()) {
             $this->notifyNoGateway($organization, $event);
+
             return response()->json(['message' => 'no_compatible_gateway'], 422);
         }
 
@@ -206,8 +207,8 @@ class OrganizationEventRegistrationController extends Controller
         }
 
         $viewerBase = config('app.viewer_url', 'http://localhost:5173');
-        $eventFee   = (float) $event->fee;
-        $feeAmount  = app(BillingService::class)->calculateFee($eventFee);
+        $eventFee = (float) $event->fee;
+        $feeAmount = app(BillingService::class)->calculateFee($eventFee);
 
         try {
             $paymentUrl = $this->createPaymentUrl($gateway, $event, $organization, $registration, $eventFee, $feeAmount, $viewerBase);
@@ -227,18 +228,24 @@ class OrganizationEventRegistrationController extends Controller
     public function checkPayment(Request $request)
     {
         $organization = Organization::where('route', $request->route('orgRoute'))->first();
-        if (! $organization) return response()->json(['message' => 'org_not_found'], 404);
+        if (! $organization) {
+            return response()->json(['message' => 'org_not_found'], 404);
+        }
 
         $event = OrganizationEvent::where('organization_id', $organization->id)
             ->where('route', $request->route('eventRoute'))
             ->first();
-        if (! $event) return response()->json(['message' => 'event_not_found'], 404);
+        if (! $event) {
+            return response()->json(['message' => 'event_not_found'], 404);
+        }
 
         $userId = $request->user('sanctum')->id;
         $registration = OrganizationEventRegistration::where('organization_event_id', $event->id)
             ->where('user_id', $userId)
             ->first();
-        if (! $registration) return response()->json(['message' => 'not_registered'], 404);
+        if (! $registration) {
+            return response()->json(['message' => 'not_registered'], 404);
+        }
 
         if (in_array($registration->payment_status, ['confirmed', 'free'])) {
             return response()->json(['message' => ['status' => $registration->payment_status]], 200);
@@ -252,17 +259,18 @@ class OrganizationEventRegistrationController extends Controller
         if ($gateway && $registration->gateway_preference_id) {
             try {
                 if ($gateway->gateway === 'mercadopago') {
-                    $token   = Crypt::decryptString($gateway->access_token);
+                    $token = Crypt::decryptString($gateway->access_token);
                     $results = app(MercadoPagoService::class)
                         ->searchPaymentsByExternalReference($token, $registration->id);
                     foreach ($results['results'] ?? [] as $payment) {
                         if ($payment['status'] === 'approved') {
                             $registration->update([
-                                'payment_status'    => 'confirmed',
-                                'gateway_payment_id'=> (string) $payment['id'],
-                                'gateway'           => 'mercadopago',
-                                'confirmed_at'      => now(),
+                                'payment_status' => 'confirmed',
+                                'gateway_payment_id' => (string) $payment['id'],
+                                'gateway' => 'mercadopago',
+                                'confirmed_at' => now(),
                             ]);
+
                             return response()->json(['message' => ['status' => 'confirmed']], 200);
                         }
                     }
@@ -274,11 +282,12 @@ class OrganizationEventRegistrationController extends Controller
                     if (($session['payment_status'] ?? '') === 'paid') {
                         $paymentIntentId = $session['payment_intent'] ?? $registration->gateway_preference_id;
                         $registration->update([
-                            'payment_status'    => 'confirmed',
-                            'gateway_payment_id'=> $paymentIntentId,
-                            'gateway'           => 'stripe_connect',
-                            'confirmed_at'      => now(),
+                            'payment_status' => 'confirmed',
+                            'gateway_payment_id' => $paymentIntentId,
+                            'gateway' => 'stripe_connect',
+                            'confirmed_at' => now(),
                         ]);
+
                         return response()->json(['message' => ['status' => 'confirmed']], 200);
                     }
                 }
@@ -293,18 +302,24 @@ class OrganizationEventRegistrationController extends Controller
     public function retryPayment(Request $request)
     {
         $organization = Organization::where('route', $request->route('orgRoute'))->first();
-        if (! $organization) return response()->json(['message' => 'org_not_found'], 404);
+        if (! $organization) {
+            return response()->json(['message' => 'org_not_found'], 404);
+        }
 
         $event = OrganizationEvent::where('organization_id', $organization->id)
             ->where('route', $request->route('eventRoute'))
             ->first();
-        if (! $event) return response()->json(['message' => 'event_not_found'], 404);
+        if (! $event) {
+            return response()->json(['message' => 'event_not_found'], 404);
+        }
 
         $userId = $request->user('sanctum')->id;
         $registration = OrganizationEventRegistration::where('organization_event_id', $event->id)
             ->where('user_id', $userId)
             ->first();
-        if (! $registration) return response()->json(['message' => 'not_registered'], 404);
+        if (! $registration) {
+            return response()->json(['message' => 'not_registered'], 404);
+        }
         if ($registration->payment_status !== 'pending') {
             return response()->json(['message' => 'not_pending'], 422);
         }
@@ -315,7 +330,9 @@ class OrganizationEventRegistrationController extends Controller
             $event->currency ?? 'brl'
         );
 
-        if ($allGateways->isEmpty()) return response()->json(['message' => 'no_gateway'], 422);
+        if ($allGateways->isEmpty()) {
+            return response()->json(['message' => 'no_gateway'], 422);
+        }
 
         // Multiple gateways and buyer hasn't chosen → return list to let them pick
         if ($allGateways->count() > 1 && ! $chosenGatewayKey) {
@@ -327,11 +344,13 @@ class OrganizationEventRegistrationController extends Controller
         $gateway = $chosenGatewayKey
             ? $allGateways->firstWhere('gateway', $chosenGatewayKey)
             : $allGateways->first();
-        if (! $gateway) return response()->json(['message' => 'no_gateway'], 422);
+        if (! $gateway) {
+            return response()->json(['message' => 'no_gateway'], 422);
+        }
 
         $viewerBase = config('app.viewer_url', 'http://localhost:5173');
-        $eventFee   = (float) $event->fee;
-        $feeAmount  = app(BillingService::class)->calculateFee($eventFee);
+        $eventFee = (float) $event->fee;
+        $feeAmount = app(BillingService::class)->calculateFee($eventFee);
 
         // Multi-gateway: billing item deferred until gateway chosen — record it now for MP
         if (is_null($registration->gateway) && $gateway->gateway === 'mercadopago') {
@@ -360,12 +379,14 @@ class OrganizationEventRegistrationController extends Controller
             ->where('created_at', '>=', now()->subHour())
             ->exists();
 
-        if ($alreadySent) return;
+        if ($alreadySent) {
+            return;
+        }
 
         $route = "/org/{$organization->route}/manage/finances";
         foreach ($memberIds as $userId) {
             NotificationService::send($userId, 'notification.no_gateway_configured', [
-                'org'   => $organization->name,
+                'org' => $organization->name,
                 'event' => $event->name,
             ], $route);
         }
@@ -377,6 +398,7 @@ class OrganizationEventRegistrationController extends Controller
         if (in_array(strtolower($currency), ['usd', 'eur'])) {
             return $gateways->filter(fn ($gw) => $gw->gateway === 'stripe_connect')->values();
         }
+
         return $gateways->values();
     }
 
@@ -399,13 +421,14 @@ class OrganizationEventRegistrationController extends Controller
                 $feeAmount
             );
             $registration->update(['gateway_preference_id' => $pref['id'], 'gateway' => 'mercadopago']);
+
             return $pref['init_point'];
         }
 
         // Stripe Connect
         $amountCents = (int) round($eventFee * 100);
-        $feeCents    = (int) round($feeAmount * 100);
-        $currency    = strtolower($event->currency ?? 'brl');
+        $feeCents = (int) round($feeAmount * 100);
+        $currency = strtolower($event->currency ?? 'brl');
         $session = app(StripeConnectService::class)->createCheckoutSession(
             $gateway->gateway_user_id,
             $event->name,
@@ -417,6 +440,7 @@ class OrganizationEventRegistrationController extends Controller
             $failureUrl
         );
         $registration->update(['gateway_preference_id' => $session['id'], 'gateway' => 'stripe_connect']);
+
         return $session['url'];
     }
 

@@ -19,7 +19,7 @@ class OrganizationPaymentGateway extends Model
     protected $hidden = ['access_token', 'refresh_token'];
 
     protected $casts = [
-        'active'     => 'boolean',
+        'active' => 'boolean',
         'expires_at' => 'datetime',
     ];
 

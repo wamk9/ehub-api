@@ -14,40 +14,41 @@ use Illuminate\Validation\ValidationException;
 
 class PointEventController extends Controller
 {
-    function create(Request $request)
+    public function create(Request $request)
     {
-        if (!$this->verifyLeagueUserAuthorization($request->user('sanctum')->id, $request->route('leagueRoute'), 'config', 'create_league_tournaments'))
+        if (! $this->verifyLeagueUserAuthorization($request->user('sanctum')->id, $request->route('leagueRoute'), 'config', 'create_league_tournaments')) {
             return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        DB::transaction(function() use ($request)
-        {
+        DB::transaction(function () use ($request) {
             $league = League::where('route', $request->route('leagueRoute'))->first();
 
-            if (!$league)
+            if (! $league) {
                 throw ValidationException::withMessages(['message' => 'League not found']);
+            }
 
             $tournament = Tournament::where([
                 ['route', '=', $request->route('tournamentRoute')],
                 ['league_id', '=', $league->id],
             ])->first();
 
-            if (!$tournament)
+            if (! $tournament) {
                 throw ValidationException::withMessages(['message' => 'Tournament not found']);
+            }
 
-            if ($request->filled('events'))
-            {
+            if ($request->filled('events')) {
                 $requestEventData = [
                     'name',
                     'init_at',
                     'duration',
                     'description',
                     'can_discard',
-                    'route'
+                    'route',
                 ];
 
                 $requestRoundData = [
                     'name',
-                    'references'
+                    'references',
                 ];
 
                 $requestReferencesData = [
@@ -55,26 +56,28 @@ class PointEventController extends Controller
                     'points',
                 ];
 
-                foreach ($request->only('events')['events'] as $event)
-                {
+                foreach ($request->only('events')['events'] as $event) {
                     $eventData = [];
                     $roundData = [];
                     $referenceData = [];
 
-                    foreach($event as $key => $value)
-                        if (in_array($key, $requestEventData))
+                    foreach ($event as $key => $value) {
+                        if (in_array($key, $requestEventData)) {
                             $eventData[$key] = $value;
+                        }
+                    }
 
                     $eventData['tournament_id'] = $tournament->id;
 
                     $pointEvent = new PointEvent($eventData);
                     $pointEvent->save();
 
-                    foreach ($event['rounds'] as $round)
-                    {
-                        foreach($round as $key => $value)
-                            if (in_array($key, $requestRoundData))
+                    foreach ($event['rounds'] as $round) {
+                        foreach ($round as $key => $value) {
+                            if (in_array($key, $requestRoundData)) {
                                 $roundData[$key] = $value;
+                            }
+                        }
 
                         $roundData['point_event_id'] = $pointEvent->id;
 
@@ -82,11 +85,12 @@ class PointEventController extends Controller
                         $pointRound->save();
                     }
 
-                    foreach ($roundData['references'] as $reference)
-                    {
-                        foreach($reference as $key => $value)
-                            if (in_array($key, $requestReferencesData))
+                    foreach ($roundData['references'] as $reference) {
+                        foreach ($reference as $key => $value) {
+                            if (in_array($key, $requestReferencesData)) {
                                 $referenceData[$key] = $value;
+                            }
+                        }
 
                         $referenceData['point_round_id'] = $pointRound->id;
 
@@ -97,34 +101,35 @@ class PointEventController extends Controller
             }
         });
 
-        return response()->json(['message' => "Event Created"], 200);
+        return response()->json(['message' => 'Event Created'], 200);
     }
 
     public function show(Request $request)
     {
-		$league = League::where('route', $request->route('leagueRoute'))->first();
+        $league = League::where('route', $request->route('leagueRoute'))->first();
 
-        if (!$league)
+        if (! $league) {
             throw ValidationException::withMessages(['message' => 'League not found']);
+        }
 
         $tournament = Tournament::where([
             ['route', '=', $request->route('tournamentRoute')],
             ['league_id', '=', $league->id],
         ])->first();
 
-        if (!$tournament)
+        if (! $tournament) {
             throw ValidationException::withMessages(['message' => 'Tournament not found']);
+        }
 
         $event = PointEvent::where([
             ['route', '=', $request->route('eventRoute')],
             ['tournament_id', '=', $tournament->id],
         ])->first();
 
-        if (!$event)
+        if (! $event) {
             throw ValidationException::withMessages(['message' => 'Event not found']);
+        }
 
-
-
-            return response()->json(['message' => $event], 200);
+        return response()->json(['message' => $event], 200);
     }
 }

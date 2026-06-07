@@ -20,7 +20,7 @@ class OrganizationInvite extends Model
 
     protected $casts = [
         'accepted_at' => 'datetime',
-        'expires_at'  => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     public function organization()

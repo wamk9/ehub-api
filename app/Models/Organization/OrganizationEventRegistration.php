@@ -20,7 +20,7 @@ class OrganizationEventRegistration extends Model
     ];
 
     protected $casts = [
-        'form_data'    => 'array',
+        'form_data' => 'array',
         'confirmed_at' => 'datetime',
     ];
 

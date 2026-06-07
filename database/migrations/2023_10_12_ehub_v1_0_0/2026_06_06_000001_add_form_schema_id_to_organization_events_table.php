@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('organization_events', 'form_schema_id')) {
+        if (! Schema::hasColumn('organization_events', 'form_schema_id')) {
             Schema::table('organization_events', function (Blueprint $table) {
                 $table->uuid('form_schema_id')->nullable()->after('runmode');
             });

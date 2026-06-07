@@ -2,23 +2,23 @@
 
 namespace App\Services;
 
-use App\Models\User\Notification;
-use App\Models\Organization\OrgFollow;
 use App\Models\Organization\OrganizationMember;
+use App\Models\Organization\OrgFollow;
+use App\Models\User\Notification;
 
 class NotificationService
 {
     /**
-     * @param string $key   i18n key (e.g. "notification.member_added")
-     * @param array  $params interpolation params stored as JSON in description
+     * @param  string  $key   i18n key (e.g. "notification.member_added")
+     * @param  array  $params interpolation params stored as JSON in description
      */
     public static function send(string $userId, string $key, array $params = [], string $route = ''): void
     {
         Notification::create([
-            'user_id'     => $userId,
-            'title'       => $key,
+            'user_id' => $userId,
+            'title' => $key,
             'description' => empty($params) ? '' : json_encode($params),
-            'route'       => $route,
+            'route' => $route,
         ]);
     }
 

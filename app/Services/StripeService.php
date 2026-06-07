@@ -22,7 +22,7 @@ class StripeService
         }
 
         $customer = $this->stripe->customers->create([
-            'name'     => $org->name,
+            'name' => $org->name,
             'metadata' => ['organization_id' => $org->id, 'route' => $org->route],
         ]);
 
@@ -34,7 +34,7 @@ class StripeService
     public function createSetupIntent(string $customerId): string
     {
         $intent = $this->stripe->setupIntents->create([
-            'customer'            => $customerId,
+            'customer' => $customerId,
             'payment_method_types' => ['card'],
         ]);
 
@@ -44,6 +44,7 @@ class StripeService
     public function getDefaultPaymentMethod(string $customerId): ?string
     {
         $customer = $this->stripe->customers->retrieve($customerId, ['expand' => ['default_source']]);
+
         return $customer->invoice_settings->default_payment_method ?? null;
     }
 
@@ -63,29 +64,29 @@ class StripeService
     {
         $customerId = $invoiceModel->organization->stripe_customer_id;
 
-        if (!$customerId) {
+        if (! $customerId) {
             throw new \RuntimeException('Organization has no Stripe customer ID.');
         }
 
         // Create invoice items
         foreach ($lineItems as $item) {
             $this->stripe->invoiceItems->create([
-                'customer'    => $customerId,
-                'amount'      => (int) round($item['amount'] * 100), // centavos
-                'currency'    => 'brl',
+                'customer' => $customerId,
+                'amount' => (int) round($item['amount'] * 100), // centavos
+                'currency' => 'brl',
                 'description' => $item['description'],
             ]);
         }
 
         // Create and finalize invoice
         $invoice = $this->stripe->invoices->create([
-            'customer'         => $customerId,
-            'auto_advance'     => false,
+            'customer' => $customerId,
+            'auto_advance' => false,
             'collection_method' => 'charge_automatically',
-            'metadata'         => [
+            'metadata' => [
                 'organization_id' => $invoiceModel->organization_id,
-                'billing_cycle'   => $invoiceModel->billing_cycle,
-                'invoice_id'      => $invoiceModel->id,
+                'billing_cycle' => $invoiceModel->billing_cycle,
+                'invoice_id' => $invoiceModel->id,
             ],
         ]);
 
@@ -99,14 +100,14 @@ class StripeService
         try {
             $paid = $this->stripe->invoices->pay($invoice->id);
             $invoiceModel->update([
-                'status'                     => 'paid',
-                'stripe_payment_intent_id'   => $paid->payment_intent,
-                'paid_at'                    => now(),
+                'status' => 'paid',
+                'stripe_payment_intent_id' => $paid->payment_intent,
+                'paid_at' => now(),
             ]);
         } catch (\Stripe\Exception\CardException $e) {
             $invoiceModel->update([
-                'status'     => 'failed',
-                'failed_at'  => now(),
+                'status' => 'failed',
+                'failed_at' => now(),
             ]);
         }
 

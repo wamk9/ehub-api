@@ -138,8 +138,8 @@ class OrganizationEventStageController extends Controller
             ->where('route', $stageKey)
             ->first()
             ?? OrganizationEventStage::where('organization_event_id', $event->id)
-            ->where('id', $stageKey)
-            ->first();
+                ->where('id', $stageKey)
+                ->first();
 
         if (! $stage) {
             return response()->json(['message' => 'stage_not_found'], 404);
@@ -208,10 +208,6 @@ class OrganizationEventStageController extends Controller
             return $err;
         }
 
-        if (! $event->initialized) {
-            return response()->json(['message' => 'event_not_initialized'], 422);
-        }
-
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
             ->where('route', $request->route('stageRoute'))
             ->first();
@@ -233,6 +229,10 @@ class OrganizationEventStageController extends Controller
 
             if ($prevStage && ! $prevStage->finished) {
                 return response()->json(['message' => 'previous_stage_not_finished'], 422);
+            }
+
+            if (! $event->initialized) {
+                $event->update(['initialized' => true]);
             }
 
             $stage->update(['initialized' => true, 'in_progress' => true]);

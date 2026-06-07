@@ -5,6 +5,7 @@ namespace App\Models\Organization;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
 // Relations used: OrganizationPaymentGateway, OrganizationBillingInvoice (lazy-loaded)
 
 class Organization extends Model

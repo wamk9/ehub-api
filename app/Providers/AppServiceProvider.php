@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
         $mainPath = database_path('migrations');
-        $directories = glob($mainPath . '/*' , GLOB_ONLYDIR);
+        $directories = glob($mainPath.'/*', GLOB_ONLYDIR);
         $paths = array_merge([$mainPath], $directories);
         $this->loadMigrationsFrom($paths);
     }

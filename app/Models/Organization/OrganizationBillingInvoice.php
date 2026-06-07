@@ -19,9 +19,9 @@ class OrganizationBillingInvoice extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
-        'due_date'     => 'date',
-        'paid_at'      => 'datetime',
-        'failed_at'    => 'datetime',
+        'due_date' => 'date',
+        'paid_at' => 'datetime',
+        'failed_at' => 'datetime',
     ];
 
     public function organization()

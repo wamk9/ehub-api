@@ -12,7 +12,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validated = Validator::make($request->all(), [
-            'mail'     => 'required|email',
+            'mail' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -22,19 +22,20 @@ class AuthController extends Controller
 
         $user = User::where('mail', $request->mail)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
         return response()->json([
             'message' => 'User Logged In Successfully',
-            'token'   => $user->createToken('API TOKEN')->plainTextToken,
+            'token' => $user->createToken('API TOKEN')->plainTextToken,
         ], 200);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
+
         return response()->json(['message' => 'User successfully logged out'], 200);
     }
 }

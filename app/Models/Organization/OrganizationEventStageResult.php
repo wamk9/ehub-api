@@ -18,9 +18,9 @@ class OrganizationEventStageResult extends Model
     ];
 
     protected $casts = [
-        'qualified'   => 'boolean',
+        'qualified' => 'boolean',
         'result_data' => 'array',
-        'score'       => 'decimal:4',
+        'score' => 'decimal:4',
     ];
 
     public function stage()

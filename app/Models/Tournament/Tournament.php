@@ -2,13 +2,13 @@
 
 namespace App\Models\Tournament;
 
+use App\Models\Category\SubCategory;
+use App\Models\EHub\Runmode;
+use App\Models\League\League;
+use App\Models\Payment\Currency;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\EHub\Runmode;
-use App\Models\League\League;
-use App\Models\Category\SubCategory;
-use App\Models\Payment\Currency;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Tournament extends Model

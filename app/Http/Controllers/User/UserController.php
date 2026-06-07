@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\User\Notification as UserNotification;
 use App\Models\User\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -23,37 +23,37 @@ class UserController extends Controller
             $dataToGet = ['name', 'surname', 'mail', 'phone', 'username', 'password'];
 
             $validateUser = Validator::make($request->only($dataToGet),
-            [
-                'name'     => 'required',
-                'surname'  => 'required',
-                'mail'     => 'required|email|unique:users,mail',
-                'phone'    => 'required|unique:users,phone',
-                'username' => 'required|unique:users,username',
-                'password' => 'required',
-            ],
-            [
-                'name.required'     => 'user.name.required',
-                'surname.required'  => 'user.surname.required',
-                'mail.required'     => 'user.mail.required',
-                'mail.email'        => 'user.mail.email',
-                'mail.unique'       => 'user.mail.unique',
-                'phone.required'    => 'user.phone.required',
-                'phone.unique'      => 'user.phone.unique',
-                'username.required' => 'user.username.required',
-                'username.unique'   => 'user.username.unique',
-                'password.required' => 'user.password.required',
-            ]);
+                [
+                    'name' => 'required',
+                    'surname' => 'required',
+                    'mail' => 'required|email|unique:users,mail',
+                    'phone' => 'required|unique:users,phone',
+                    'username' => 'required|unique:users,username',
+                    'password' => 'required',
+                ],
+                [
+                    'name.required' => 'user.name.required',
+                    'surname.required' => 'user.surname.required',
+                    'mail.required' => 'user.mail.required',
+                    'mail.email' => 'user.mail.email',
+                    'mail.unique' => 'user.mail.unique',
+                    'phone.required' => 'user.phone.required',
+                    'phone.unique' => 'user.phone.unique',
+                    'username.required' => 'user.username.required',
+                    'username.unique' => 'user.username.unique',
+                    'password.required' => 'user.password.required',
+                ]);
 
-            if($validateUser->fails()){
+            if ($validateUser->fails()) {
                 return response()->json([
                     'status' => false,
                     'message' => 'validation error',
-                    'errors' => $validateUser->errors()
+                    'errors' => $validateUser->errors(),
                 ], 401);
             }
 
             $mail = strtolower($request->mail);
-            if (!Cache::get("ev_verified:{$mail}")) {
+            if (! Cache::get("ev_verified:{$mail}")) {
                 return response()->json([
                     'status' => false,
                     'message' => 'E-mail não verificado.',
@@ -64,41 +64,44 @@ class UserController extends Controller
 
             $result = DB::transaction(function () use ($request) {
                 $user = User::create([
-                    'name'              => $request->name,
-                    'surname'           => $request->surname,
-                    'mail'              => $request->mail,
-                    'phone'             => $request->phone,
-                    'username'          => $request->username,
-                    'password'          => Hash::make($request->password),
+                    'name' => $request->name,
+                    'surname' => $request->surname,
+                    'mail' => $request->mail,
+                    'phone' => $request->phone,
+                    'username' => $request->username,
+                    'password' => Hash::make($request->password),
                     'email_verified_at' => now(),
                 ]);
 
                 if ($request->filled('image')) {
                     $path = storage_path('app/public/users/'.$user->username.'/');
 
-                    if (!File::isDirectory($path))
+                    if (! File::isDirectory($path)) {
                         File::makeDirectory($path, 0755, true, true);
+                    }
 
                     Image::make($request->only('image')['image'])
-                        ->resize(400, 400, function ($constraint) { $constraint->aspectRatio(); })
+                        ->resize(400, 400, function ($constraint) {
+                            $constraint->aspectRatio();
+                        })
                         ->encode('webp', 90)
                         ->save($path.'/profile.webp');
                 }
 
                 return [
-                    'user'  => $user,
-                    'token' => $user->createToken("API TOKEN")->plainTextToken,
+                    'user' => $user,
+                    'token' => $user->createToken('API TOKEN')->plainTextToken,
                 ];
             });
 
             return response()->json([
                 'message' => 'User Created Successfully',
-                'token'   => $result['token'],
+                'token' => $result['token'],
             ], 201);
 
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 500);
         }
     }
@@ -110,11 +113,12 @@ class UserController extends Controller
 
     public function getNotifications()
     {
-        if (!Auth::check())
+        if (! Auth::check()) {
             return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+        }
 
         $where_statement = [
-            ['user_id', '=', auth()->user()->id]
+            ['user_id', '=', auth()->user()->id],
         ];
 
         $notifications = UserNotification::where($where_statement)->get();
@@ -124,15 +128,17 @@ class UserController extends Controller
 
     public function setNotificationRead(Request $request)
     {
-        if (!Auth::check())
+        if (! Auth::check()) {
             return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+        }
 
-        if (!$request->route('id'))
+        if (! $request->route('id')) {
             return response()->json(['message' => 'Notification id not sent', 'status' => false], 401);
+        }
 
         $where_statement = [
             ['id', '=', $request->route('id')],
-            ['user_id', '=', auth()->user()->id]
+            ['user_id', '=', auth()->user()->id],
         ];
 
         $notification = UserNotification::where($where_statement)->first();
@@ -144,8 +150,9 @@ class UserController extends Controller
 
     public function deleteNotification(Request $request)
     {
-        if (!Auth::check())
+        if (! Auth::check()) {
             return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+        }
 
         UserNotification::where('id', $request->route('id'))
             ->where('user_id', auth()->user()->id)
@@ -156,8 +163,9 @@ class UserController extends Controller
 
     public function clearNotifications()
     {
-        if (!Auth::check())
+        if (! Auth::check()) {
             return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+        }
 
         UserNotification::where('user_id', auth()->user()->id)->delete();
 
@@ -169,20 +177,20 @@ class UserController extends Controller
         $user = $request->user();
 
         $imageUrl = null;
-        $imagePath = storage_path('app/public/users/' . $user->username . '/profile.webp');
+        $imagePath = storage_path('app/public/users/'.$user->username.'/profile.webp');
         if (File::exists($imagePath)) {
-            $imageUrl = asset('storage/users/' . $user->username . '/profile.webp');
+            $imageUrl = asset('storage/users/'.$user->username.'/profile.webp');
         }
 
         return response()->json([
-            'name'              => $user->name,
-            'surname'           => $user->surname,
-            'username'          => $user->username,
-            'mail'              => $user->mail,
-            'phone'             => $user->phone,
-            'image'             => $imageUrl,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'username' => $user->username,
+            'mail' => $user->mail,
+            'phone' => $user->phone,
+            'image' => $imageUrl,
             'email_verified_at' => $user->email_verified_at,
-            'created_at'        => $user->created_at,
+            'created_at' => $user->created_at,
         ]);
     }
 
@@ -191,13 +199,13 @@ class UserController extends Controller
         $user = $request->user();
 
         $validator = Validator::make($request->only(['name', 'surname', 'phone', 'username', 'image']), [
-            'name'     => 'sometimes|required|string|max:180',
-            'surname'  => 'sometimes|required|string|max:180',
-            'phone'    => 'sometimes|required|unique:users,phone,' . $user->id,
-            'username' => 'sometimes|required|unique:users,username,' . $user->id,
-            'image'    => 'sometimes|nullable',
+            'name' => 'sometimes|required|string|max:180',
+            'surname' => 'sometimes|required|string|max:180',
+            'phone' => 'sometimes|required|unique:users,phone,'.$user->id,
+            'username' => 'sometimes|required|unique:users,username,'.$user->id,
+            'image' => 'sometimes|nullable',
         ], [
-            'phone.unique'    => 'user.phone.unique',
+            'phone.unique' => 'user.phone.unique',
             'username.unique' => 'user.username.unique',
         ]);
 
@@ -205,27 +213,30 @@ class UserController extends Controller
             return response()->json(['message' => 'validation error', 'errors' => $validator->errors()], 422);
         }
 
-        $data        = $validator->validated();
+        $data = $validator->validated();
         $oldUsername = $user->username;
         $newUsername = $data['username'] ?? $oldUsername;
 
         if ($newUsername !== $oldUsername) {
-            $oldPath = storage_path('app/public/users/' . $oldUsername);
-            $newPath = storage_path('app/public/users/' . $newUsername);
+            $oldPath = storage_path('app/public/users/'.$oldUsername);
+            $newPath = storage_path('app/public/users/'.$newUsername);
             if (File::isDirectory($oldPath)) {
                 File::moveDirectory($oldPath, $newPath);
             }
         }
 
         if ($request->filled('image')) {
-            $path = storage_path('app/public/users/' . $newUsername . '/');
-            if (!File::isDirectory($path))
+            $path = storage_path('app/public/users/'.$newUsername.'/');
+            if (! File::isDirectory($path)) {
                 File::makeDirectory($path, 0755, true, true);
+            }
 
             Image::make($request->image)
-                ->resize(400, 400, function ($constraint) { $constraint->aspectRatio(); })
+                ->resize(400, 400, function ($constraint) {
+                    $constraint->aspectRatio();
+                })
                 ->encode('webp', 90)
-                ->save($path . 'profile.webp');
+                ->save($path.'profile.webp');
         }
 
         $user->fill(array_diff_key($data, ['image' => null]));
@@ -233,7 +244,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Profile updated',
-            'user'    => $user->only(['name', 'surname', 'username', 'phone', 'mail']),
+            'user' => $user->only(['name', 'surname', 'username', 'phone', 'mail']),
         ]);
     }
 
@@ -241,7 +252,7 @@ class UserController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'current_password' => 'required',
-            'password'         => 'required|min:8|confirmed',
+            'password' => 'required|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -250,7 +261,7 @@ class UserController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json(['message' => 'Current password incorrect'], 403);
         }
 
@@ -275,13 +286,13 @@ class UserController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->password, $user->password)) {
+        if (! Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Password incorrect'], 403);
         }
 
         $user->tokens()->delete();
 
-        $imagePath = storage_path('app/public/users/' . $user->username);
+        $imagePath = storage_path('app/public/users/'.$user->username);
         if (File::isDirectory($imagePath)) {
             File::deleteDirectory($imagePath);
         }

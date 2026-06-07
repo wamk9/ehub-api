@@ -225,6 +225,10 @@ class OrganizationEventController extends Controller
             return response()->json(['message' => 'event_not_found'], 404);
         }
 
+        if ($event->initialized) {
+            return response()->json(['message' => 'event_already_initialized'], 422);
+        }
+
         DB::transaction(function () use ($request, $organization, $event) {
             $fields = $request->only([
                 'name', 'short_description', 'description',

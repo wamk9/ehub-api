@@ -19,7 +19,8 @@ class OrgInviteNewUser extends Mailable
         public string $role,
         public string $inviteToken,
         public string $invitedEmail,
-    ) {}
+    ) {
+    }
 
     public function envelope(): Envelope
     {
@@ -40,10 +41,10 @@ class OrgInviteNewUser extends Mailable
     {
         $base = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
 
-        return $base . '/register?' . http_build_query([
+        return $base.'/register?'.http_build_query([
             'invite' => $this->inviteToken,
-            'email'  => $this->invitedEmail,
-            'org'    => $this->orgRoute,
+            'email' => $this->invitedEmail,
+            'org' => $this->orgRoute,
         ]);
     }
 }

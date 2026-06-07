@@ -32,18 +32,18 @@ return [
     ],
 
     'mercadopago' => [
-        'client_id'     => env('MP_CLIENT_ID'),
+        'client_id' => env('MP_CLIENT_ID'),
         'client_secret' => env('MP_CLIENT_SECRET'),
-        'redirect_uri'  => env('MP_REDIRECT_URI'),
-        'sandbox'       => env('MP_SANDBOX', true),
+        'redirect_uri' => env('MP_REDIRECT_URI'),
+        'sandbox' => env('MP_SANDBOX', true),
     ],
 
     'stripe' => [
-        'key'                    => env('STRIPE_PUBLISHABLE_KEY'),
-        'secret'                 => env('STRIPE_SECRET_KEY'),
-        'webhook_secret'         => env('STRIPE_WEBHOOK_SECRET'),
-        'connect_client_id'      => env('STRIPE_CONNECT_CLIENT_ID'),
-        'connect_redirect_uri'   => env('STRIPE_CONNECT_REDIRECT_URI', 'http://localhost:8000/api/payment/gateway/callback/stripe_connect'),
+        'key' => env('STRIPE_PUBLISHABLE_KEY'),
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'connect_client_id' => env('STRIPE_CONNECT_CLIENT_ID'),
+        'connect_redirect_uri' => env('STRIPE_CONNECT_REDIRECT_URI', 'http://localhost:8000/api/payment/gateway/callback/stripe_connect'),
         'connect_webhook_secret' => env('STRIPE_CONNECT_WEBHOOK_SECRET'),
     ],
 

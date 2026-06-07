@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -33,7 +32,7 @@ class CreateSubCategoriesValuesSeeder extends Seeder
                 'name' => 'Forza Motorsport',
                 'route' => 'forza-motorsport',
                 'category_id' => 4,
-            ]
+            ],
         ];
 
         DB::table('subcategories')->insert($data);

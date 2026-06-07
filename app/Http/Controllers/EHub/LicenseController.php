@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\EHub;
 
 use App\Http\Controllers\Controller;
-use App\Models\EHub\License;
 use App\Models\EHub\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -12,18 +11,17 @@ use Srmklive\PayPal\Services\PayPal as PayPalClient;
 
 class LicenseController extends Controller
 {
-
-
-
     public function adquireLicense(Request $request)
     {
-        if (!Auth::check())
+        if (! Auth::check()) {
             return response()->json(['message' => 'Unauthorized', 'status' => false], 401);
+        }
 
         $planId = $request->only(['plan'])['plan'];
 
-        if (!$planId)
+        if (! $planId) {
             return response()->json(['message' => 'Plan id not setted', 'status' => false], 401);
+        }
 
         $user = User::find(auth()->user()->id);
         $plan = Plan::find($planId);
@@ -46,6 +44,7 @@ class LicenseController extends Controller
                     return redirect()->away($links['href']);
                 }
             }
+
             return response()->json(['message' => 'Transaction canceled', 'status' => false], 401);
         }
 
@@ -64,8 +63,9 @@ class LicenseController extends Controller
         $provider->getAccessToken();
         $response = $provider->capturePaymentOrder($request['token']);
 
-        if (isset($response['status']) && $response['status'] == 'COMPLETED')
+        if (isset($response['status']) && $response['status'] == 'COMPLETED') {
             return response()->json(['message' => 'Transaction completed.', 'status' => true], 200);
+        }
 
         return response()->json(['message' => 'Something went wrong', 'status' => false], 401);
     }

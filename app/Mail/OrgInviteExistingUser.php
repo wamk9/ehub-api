@@ -18,7 +18,8 @@ class OrgInviteExistingUser extends Mailable
         public string $inviterName,
         public string $role,
         public string $inviteToken,
-    ) {}
+    ) {
+    }
 
     public function envelope(): Envelope
     {
@@ -39,6 +40,6 @@ class OrgInviteExistingUser extends Mailable
     {
         $base = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
 
-        return $base . '/org/' . $this->orgRoute;
+        return $base.'/org/'.$this->orgRoute;
     }
 }

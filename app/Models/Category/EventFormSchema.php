@@ -20,7 +20,7 @@ class EventFormSchema extends Model
     ];
 
     protected $casts = [
-        'form_json'  => 'array',
+        'form_json' => 'array',
         'created_at' => 'datetime',
     ];
 
