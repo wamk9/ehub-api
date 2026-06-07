@@ -1,27 +1,28 @@
 <?php
 
-use App\Http\Controllers\LiveController;
-use App\Http\Controllers\TeamController;
-use App\Http\Controllers\User\UserController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
-use App\Http\Controllers\Tournament\TournamentController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Category\EventFormController;
 use App\Http\Controllers\EHub\LicenseController;
 use App\Http\Controllers\League\LeagueController;
-use App\Http\Controllers\Organization\OrganizationController;
+use App\Http\Controllers\LiveController;
 use App\Http\Controllers\Organization\ArticleController;
-use App\Http\Controllers\Organization\OrganizationEventArticleController;
 use App\Http\Controllers\Organization\OrganizationBillingController;
+use App\Http\Controllers\Organization\OrganizationController;
+use App\Http\Controllers\Organization\OrganizationEventArticleController;
 use App\Http\Controllers\Organization\OrganizationEventController;
 use App\Http\Controllers\Organization\OrganizationEventRegistrationController;
+use App\Http\Controllers\Organization\OrganizationEventStageController;
 use App\Http\Controllers\Organization\OrganizationPaymentGatewayController;
-use App\Http\Controllers\Payment\PaymentWebhookController;
 use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Payment\PaymentWebhookController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\Tournament\PointEventController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Tournament\TournamentController;
+use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,7 +53,7 @@ Route::get('/test-socket', function () {
     $data = [
         'data' => json_decode($json),
         'room' => 'teste/event1/stage1',
-        'update' => 'manage-event-stage'
+        'update' => 'manage-event-stage',
     ];
 
     // Send to Node.js Socket.IO server
@@ -60,66 +61,66 @@ Route::get('/test-socket', function () {
 
     return response()->json([
         'status' => 'sent',
-        'payload' => $data
+        'payload' => $data,
     ]);
 });
 
-Route::controller(UserController::class)->group(function() {
+Route::controller(UserController::class)->group(function () {
     Route::post('/users', 'create');
 });
 
-Route::controller(AuthController::class)->group(function(){
+Route::controller(AuthController::class)->group(function () {
     Route::post('/auth/login', 'login');
 });
 
-Route::controller(EmailVerificationController::class)->group(function(){
-    Route::post('/auth/email/send-code',   'sendCode');
+Route::controller(EmailVerificationController::class)->group(function () {
+    Route::post('/auth/email/send-code', 'sendCode');
     Route::post('/auth/email/verify-code', 'verifyCode');
 });
 
-Route::controller(LicenseController::class)->group(function(){
+Route::controller(LicenseController::class)->group(function () {
     Route::get('/license', 'showAvailableLicenses');
 });
 
-Route::controller(TournamentController::class)->group(function(){
+Route::controller(TournamentController::class)->group(function () {
     Route::get('/tournament', 'search');
     Route::post('/league/{leagueRoute}/tournament', 'create');
     Route::get('/league/{leagueRoute}/tournament/periods', 'showPeriods');
     Route::get('/league/{leagueRoute}/tournament/{tournamentRoute}', 'showDetails');
 });
 
-Route::controller(LeagueController::class)->group(function(){
+Route::controller(LeagueController::class)->group(function () {
     Route::get('/league/{leagueRoute}', 'show');
 });
 
-Route::controller(CategoryController::class)->group(function(){
+Route::controller(CategoryController::class)->group(function () {
     Route::get('/category', 'showCategories');
     Route::get('/category/{categoryRoute}', 'showSubCategories');
 });
 
-Route::controller(EventFormController::class)->group(function(){
+Route::controller(EventFormController::class)->group(function () {
     Route::get('/category/{categoryRoute}/event-form/{runmodeKey}', 'getForm');
 });
 
-Route::controller(OrganizationController::class)->group(function(){
+Route::controller(OrganizationController::class)->group(function () {
     Route::get('/organization/{orgRoute}', 'show');
 });
 
-Route::controller(ArticleController::class)->group(function(){
+Route::controller(ArticleController::class)->group(function () {
     Route::get('/organization/{orgRoute}/articles', 'index');
     Route::get('/organization/{orgRoute}/article/{articleSlug}', 'show');
 });
 
-Route::controller(OrganizationEventController::class)->group(function(){
+Route::controller(OrganizationEventController::class)->group(function () {
     Route::get('/organization/{orgRoute}/events', 'index');
     Route::get('/organization/{orgRoute}/event/{eventRoute}', 'show');
 });
 
-Route::controller(OrganizationEventRegistrationController::class)->group(function(){
+Route::controller(OrganizationEventRegistrationController::class)->group(function () {
     Route::get('/organization/{orgRoute}/event/{eventRoute}/participants', 'index');
 });
 
-Route::controller(OrganizationEventArticleController::class)->group(function(){
+Route::controller(OrganizationEventArticleController::class)->group(function () {
     Route::get('/organization/{orgRoute}/event/{eventRoute}/articles', 'index');
     Route::get('/organization/{orgRoute}/event/{eventRoute}/article/{articleSlug}', 'show');
 });
@@ -128,26 +129,26 @@ Route::controller(OrganizationEventArticleController::class)->group(function(){
 Route::get('/payment/gateway/callback/{gateway}', [OrganizationPaymentGatewayController::class, 'callback']);
 
 // Payment webhooks (no auth, verified internally)
-Route::controller(PaymentWebhookController::class)->prefix('payment/webhook')->group(function(){
-    Route::post('/mercadopago',    'mercadopago');
-    Route::post('/stripe',         'stripe');
+Route::controller(PaymentWebhookController::class)->prefix('payment/webhook')->group(function () {
+    Route::post('/mercadopago', 'mercadopago');
+    Route::post('/stripe', 'stripe');
     Route::post('/stripe-connect', 'stripeConnect');
 });
 
-Route::middleware('auth:sanctum')->group(function() {
+Route::middleware('auth:sanctum')->group(function () {
     // Route::resource('users', UserController::class);
     // Route::resource('teams', TeamController::class);
     // Route::resource('auth', AuthController::class);
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    Route::controller(LicenseController::class)->group(function(){
+    Route::controller(LicenseController::class)->group(function () {
         Route::post('/license/adquire', 'adquireLicense')->name('paypal');
         Route::post('/license/canceled', 'canceledLicensePayment')->name('paypal.payment.canceled');
         Route::post('/license/success', 'adquiredLicense')->name('paypal.payment.successful');
     });
 
-    Route::controller(UserController::class)->group(function(){
+    Route::controller(UserController::class)->group(function () {
         Route::get('/notification', 'getNotifications');
         Route::patch('/notification/{id}', 'setNotificationRead');
         Route::delete('/notification/{id}', 'deleteNotification');
@@ -161,40 +162,40 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::delete('/user', 'deleteAccount');
     });
 
-    Route::controller(LeagueController::class)->group(function(){
+    Route::controller(LeagueController::class)->group(function () {
         Route::post('/league', 'create');
         Route::patch('/league/{leagueRoute}/profile', 'updateProfile');
         Route::delete('/league/{leagueRoute}', 'delete');
         Route::get('/league', 'show');
     });
 
-    Route::controller(PaymentController::class)->group(function(){
+    Route::controller(PaymentController::class)->group(function () {
         Route::get('/payment-status', 'showAvailableStatus');
         Route::get('/currency', 'showAvailableCurrencies');
         Route::patch('/league/{leagueRoute}/tournament/{tournamentRoute}/participant/payment', 'updateProfile');
     });
 
-    Route::controller(TournamentController::class)->group(function(){
+    Route::controller(TournamentController::class)->group(function () {
         Route::post('/league/{leagueRoute}/tournament', 'create');
         Route::get('/league/{leagueRoute}/tournament', 'showOnLeagueDashboard');
         Route::patch('/league/{leagueRoute}/tournament/{tournamentRoute}', 'updateProfile');
         Route::post('/league/{leagueRoute}/tournament/{tournamentRoute}/participant/subscribe', '');
     });
 
-    Route::controller(PointEventController::class)->group(function(){
+    Route::controller(PointEventController::class)->group(function () {
         Route::post('/league/{leagueRoute}/tournament/{tournamentRoute}/event', 'create');
         Route::get('/league/{leagueRoute}/tournament/{tournamentRoute}/event/{eventRoute}', 'show');
         Route::post('/league/{leagueRoute}/tournament/{tournamentRoute}/event/{eventRoute}/round', 'createRound');
     });
 
-    Route::controller(TeamController::class)->group(function(){
+    Route::controller(TeamController::class)->group(function () {
         Route::get('/my-team', 'showMyTeams');
         Route::post('/my-team/create', 'create');
         Route::get('/my-team/{id}', 'showMyTeams');
         Route::patch('/my-team/{id}', 'update');
     });
 
-    Route::controller(OrganizationController::class)->group(function(){
+    Route::controller(OrganizationController::class)->group(function () {
         Route::get('/organizations/mine', 'getMine');
         Route::post('/organization', 'create');
         Route::patch('/organization/{orgRoute}/profile', 'updateProfile');
@@ -213,20 +214,20 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::delete('/organization/{orgRoute}/follow', 'unfollow');
     });
 
-    Route::controller(ArticleController::class)->group(function(){
+    Route::controller(ArticleController::class)->group(function () {
         Route::post('/organization/{orgRoute}/article', 'store');
         Route::patch('/organization/{orgRoute}/article/{articleId}', 'update');
         Route::delete('/organization/{orgRoute}/article/{articleId}', 'destroy');
         Route::post('/organization/{orgRoute}/article/image', 'uploadImage');
     });
 
-    Route::controller(OrganizationEventController::class)->group(function(){
+    Route::controller(OrganizationEventController::class)->group(function () {
         Route::post('/organization/{orgRoute}/event', 'store');
         Route::patch('/organization/{orgRoute}/event/{eventRoute}', 'update');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}', 'destroy');
     });
 
-    Route::controller(OrganizationEventRegistrationController::class)->group(function(){
+    Route::controller(OrganizationEventRegistrationController::class)->group(function () {
         Route::get('/organization/{orgRoute}/event/{eventRoute}/manage/participants', 'manage');
         Route::post('/organization/{orgRoute}/event/{eventRoute}/register', 'store');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}/register', 'destroy');
@@ -234,20 +235,26 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::post('/organization/{orgRoute}/event/{eventRoute}/register/payment-retry', 'retryPayment');
     });
 
-    Route::controller(OrganizationEventArticleController::class)->group(function(){
+    Route::controller(OrganizationEventArticleController::class)->group(function () {
         Route::post('/organization/{orgRoute}/event/{eventRoute}/article', 'store');
         Route::patch('/organization/{orgRoute}/event/{eventRoute}/article/{articleId}', 'update');
         Route::delete('/organization/{orgRoute}/event/{eventRoute}/article/{articleId}', 'destroy');
         Route::post('/organization/{orgRoute}/event/{eventRoute}/article/image', 'uploadImage');
     });
 
-    Route::controller(OrganizationPaymentGatewayController::class)->group(function(){
+    Route::controller(OrganizationEventStageController::class)->group(function () {
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/stage', 'store');
+        Route::patch('/organization/{orgRoute}/event/{eventRoute}/stage/{stageId}', 'update');
+        Route::delete('/organization/{orgRoute}/event/{eventRoute}/stage/{stageId}', 'destroy');
+    });
+
+    Route::controller(OrganizationPaymentGatewayController::class)->group(function () {
         Route::get('/organization/{orgRoute}/payment-gateways', 'index');
         Route::post('/organization/{orgRoute}/payment-gateway/{gateway}/connect', 'connect');
         Route::delete('/organization/{orgRoute}/payment-gateway/{gateway}', 'disconnect');
     });
 
-    Route::controller(OrganizationBillingController::class)->group(function(){
+    Route::controller(OrganizationBillingController::class)->group(function () {
         Route::get('/organization/{orgRoute}/billing', 'index');
         Route::post('/organization/{orgRoute}/billing/stripe-setup', 'setupStripe');
         Route::patch('/organization/{orgRoute}/billing/stripe-setup', 'confirmStripeCard');
@@ -255,6 +262,6 @@ Route::middleware('auth:sanctum')->group(function() {
     });
 });
 
-Route::fallback(function (){
+Route::fallback(function () {
     abort(404, 'API resource not found');
 });
