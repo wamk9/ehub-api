@@ -12,6 +12,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Every minute — initialize events that have reached their start_at
+        $schedule->command('events:initialize-started')->everyMinute();
+
         // 1st of every month at 06:00 — generate and charge invoices
         $schedule->command('billing:generate-monthly')->monthlyOn(1, '06:00');
 

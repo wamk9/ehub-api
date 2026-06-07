@@ -244,8 +244,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(OrganizationEventStageController::class)->group(function () {
         Route::post('/organization/{orgRoute}/event/{eventRoute}/stage', 'store');
-        Route::patch('/organization/{orgRoute}/event/{eventRoute}/stage/{stageId}', 'update');
-        Route::delete('/organization/{orgRoute}/event/{eventRoute}/stage/{stageId}', 'destroy');
+        Route::patch('/organization/{orgRoute}/event/{eventRoute}/stage/{stageRoute}', 'update');
+        Route::delete('/organization/{orgRoute}/event/{eventRoute}/stage/{stageRoute}', 'destroy');
+        Route::patch('/organization/{orgRoute}/event/{eventRoute}/stage/{stageRoute}/control', 'control');
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/stage/{stageRoute}/results', 'setResults');
     });
 
     Route::controller(OrganizationPaymentGatewayController::class)->group(function () {

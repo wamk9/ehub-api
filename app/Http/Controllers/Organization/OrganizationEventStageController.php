@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization\Organization;
 use App\Models\Organization\OrganizationEvent;
 use App\Models\Organization\OrganizationEventStage;
+use App\Models\Organization\OrganizationEventStageResult;
 use App\Models\Organization\OrganizationMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -133,7 +134,7 @@ class OrganizationEventStageController extends Controller
         }
 
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
-            ->where('id', $request->route('stageId'))
+            ->where('route', $request->route('stageRoute'))
             ->first();
 
         if (! $stage) {
@@ -184,7 +185,7 @@ class OrganizationEventStageController extends Controller
         }
 
         $stage = OrganizationEventStage::where('organization_event_id', $event->id)
-            ->where('id', $request->route('stageId'))
+            ->where('route', $request->route('stageRoute'))
             ->first();
 
         if (! $stage) {
@@ -194,6 +195,104 @@ class OrganizationEventStageController extends Controller
         $stage->delete();
 
         return response()->json(['message' => 'stage_deleted'], 200);
+    }
+
+    public function control(Request $request)
+    {
+        [$organization, $event, $err] = $this->resolveEventAndOrg($request);
+        if ($err) {
+            return $err;
+        }
+
+        if (! $event->initialized) {
+            return response()->json(['message' => 'event_not_initialized'], 422);
+        }
+
+        $stage = OrganizationEventStage::where('organization_event_id', $event->id)
+            ->where('route', $request->route('stageRoute'))
+            ->first();
+
+        if (! $stage) {
+            return response()->json(['message' => 'stage_not_found'], 404);
+        }
+
+        $action = $request->input('action');
+
+        if ($action === 'start') {
+            if ($stage->initialized) {
+                return response()->json(['message' => 'stage_already_started'], 422);
+            }
+
+            $prevStage = OrganizationEventStage::where('organization_event_id', $event->id)
+                ->where('stage_order', $stage->stage_order - 1)
+                ->first();
+
+            if ($prevStage && ! $prevStage->finished) {
+                return response()->json(['message' => 'previous_stage_not_finished'], 422);
+            }
+
+            $stage->update(['initialized' => true, 'in_progress' => true]);
+        } elseif ($action === 'finish') {
+            if (! $stage->in_progress) {
+                return response()->json(['message' => 'stage_not_in_progress'], 422);
+            }
+
+            $stage->update(['finished' => true, 'in_progress' => false]);
+        } else {
+            return response()->json(['message' => 'invalid_action'], 422);
+        }
+
+        return response()->json(['message' => $this->formatStage($stage->fresh(), $organization, $event)], 200);
+    }
+
+    public function setResults(Request $request)
+    {
+        [$organization, $event, $err] = $this->resolveEventAndOrg($request);
+        if ($err) {
+            return $err;
+        }
+
+        if (! $event->initialized) {
+            return response()->json(['message' => 'event_not_initialized'], 422);
+        }
+
+        $stage = OrganizationEventStage::where('organization_event_id', $event->id)
+            ->where('route', $request->route('stageRoute'))
+            ->first();
+
+        if (! $stage) {
+            return response()->json(['message' => 'stage_not_found'], 404);
+        }
+
+        if ($stage->finished) {
+            return response()->json(['message' => 'stage_already_finished'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'results' => 'required|array',
+            'results.*.registration_id' => 'required|uuid',
+            'results.*.position' => 'required|integer|min:1',
+            'results.*.score' => 'nullable|numeric',
+            'results.*.qualified' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            throw ValidationException::withMessages($validator->messages()->toArray());
+        }
+
+        OrganizationEventStageResult::where('organization_event_stage_id', $stage->id)->delete();
+
+        foreach ($request->input('results') as $r) {
+            OrganizationEventStageResult::create([
+                'organization_event_stage_id' => $stage->id,
+                'registration_id' => $r['registration_id'],
+                'position' => $r['position'],
+                'score' => $r['score'] ?? null,
+                'qualified' => $r['qualified'] ?? false,
+            ]);
+        }
+
+        return response()->json(['message' => 'results_saved'], 200);
     }
 
     private function formatStage(OrganizationEventStage $stage, Organization $organization = null, OrganizationEvent $event = null): array

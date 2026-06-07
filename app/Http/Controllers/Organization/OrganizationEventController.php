@@ -337,19 +337,19 @@ class OrganizationEventController extends Controller
             ])->values(),
         ];
 
-        if ($stage->finished) {
-            $data['results'] = $stage->results->map(fn ($r) => [
-                'position' => $r->position,
-                'score' => $r->score,
-                'qualified' => $r->qualified,
-                'user' => $r->registration?->user ? [
-                    'id' => $r->registration->user->id,
-                    'name' => $r->registration->user->name,
-                    'username' => $r->registration->user->username,
-                    'avatar' => $r->registration->user->avatar,
-                ] : null,
-            ])->values();
-        }
+        $data['results'] = $stage->results->map(fn ($r) => [
+            'id' => $r->id,
+            'registration_id' => $r->registration_id,
+            'position' => $r->position,
+            'score' => $r->score,
+            'qualified' => $r->qualified,
+            'user' => $r->registration?->user ? [
+                'id' => $r->registration->user->id,
+                'name' => $r->registration->user->name,
+                'username' => $r->registration->user->username,
+                'avatar' => $r->registration->user->avatar,
+            ] : null,
+        ])->values();
 
         return $data;
     }
