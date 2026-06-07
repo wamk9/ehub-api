@@ -12,6 +12,7 @@ use App\Http\Controllers\EHub\LicenseController;
 use App\Http\Controllers\League\LeagueController;
 use App\Http\Controllers\Organization\OrganizationController;
 use App\Http\Controllers\Organization\ArticleController;
+use App\Http\Controllers\Organization\OrganizationEventArticleController;
 use App\Http\Controllers\Organization\OrganizationBillingController;
 use App\Http\Controllers\Organization\OrganizationEventController;
 use App\Http\Controllers\Organization\OrganizationEventRegistrationController;
@@ -116,6 +117,11 @@ Route::controller(OrganizationEventController::class)->group(function(){
 
 Route::controller(OrganizationEventRegistrationController::class)->group(function(){
     Route::get('/organization/{orgRoute}/event/{eventRoute}/participants', 'index');
+});
+
+Route::controller(OrganizationEventArticleController::class)->group(function(){
+    Route::get('/organization/{orgRoute}/event/{eventRoute}/articles', 'index');
+    Route::get('/organization/{orgRoute}/event/{eventRoute}/article/{articleSlug}', 'show');
 });
 
 // Payment gateway OAuth callback (redirect, no auth needed)
@@ -225,6 +231,13 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::delete('/organization/{orgRoute}/event/{eventRoute}/register', 'destroy');
         Route::get('/organization/{orgRoute}/event/{eventRoute}/register/payment-check', 'checkPayment');
         Route::post('/organization/{orgRoute}/event/{eventRoute}/register/payment-retry', 'retryPayment');
+    });
+
+    Route::controller(OrganizationEventArticleController::class)->group(function(){
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/article', 'store');
+        Route::patch('/organization/{orgRoute}/event/{eventRoute}/article/{articleId}', 'update');
+        Route::delete('/organization/{orgRoute}/event/{eventRoute}/article/{articleId}', 'destroy');
+        Route::post('/organization/{orgRoute}/event/{eventRoute}/article/image', 'uploadImage');
     });
 
     Route::controller(OrganizationPaymentGatewayController::class)->group(function(){
